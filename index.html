@@ -247,6 +247,21 @@ tbody tr:hover{background:#f9fbfe}
 .note{font-size:12px;color:#6d7d91;padding:12px 14px;border-top:1px solid var(--line);background:#fafcff}
 @media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr 1fr}.preview-meta{grid-template-columns:1fr 1fr}.topbar{align-items:flex-start;flex-direction:column}}
 @media(max-width:560px){body{padding:10px}.cards{grid-template-columns:1fr 1fr;gap:8px}.card{padding:11px}.card strong{font-size:18px}.filters{grid-template-columns:1fr}.preview-meta{grid-template-columns:1fr}.modal-actions{align-items:flex-start;flex-direction:column}}
+
+/* ===== V4.7 MODAL STACKING FIX ===== */
+#cashRequestOverlay{
+  z-index:1000;
+}
+#previewOverlay{
+  z-index:1200;
+}
+#previewOverlay .modal,
+#previewOverlay .preview-panel,
+#previewOverlay > div{
+  position:relative;
+  z-index:1201;
+}
+
 </style>
 </head>
 <body>
@@ -1794,6 +1809,11 @@ async function openPreview(key){
       cell.innerHTML='<span class="warn">Could not load products</span>';
     }
   }));
+
+  const previewOverlayEl=$("previewOverlay");
+  if(previewOverlayEl){
+    previewOverlayEl.style.zIndex="1200";
+  }
 }
 
 function closePreview(){
