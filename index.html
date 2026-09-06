@@ -335,9 +335,14 @@ function groupDepositKey(g){return [g.saleDate,g.salesman,g.locationCode].join("
 
 function isDepositEligible(g){
   if(!depositProfile||!depositSessionToken)return false;
-  const sameSales=String(g.salesman||"").trim().toLowerCase()===String(depositProfile.salesmanName||"").trim().toLowerCase();
-  const allowed=(depositProfile.locationCodes||depositProfile.locations||[]).map(x=>String(x.locationCode||x.code||x).trim().toLowerCase());
-  return sameSales&&allowed.includes(String(g.locationCode||"").trim().toLowerCase());
+
+  // Security follows our existing A/R rule: a Salesman may act only on
+  // Location Codes assigned to their Salesman ID.
+  const allowed=(depositProfile.locationCodes||depositProfile.locations||[])
+    .map(x=>String(x.locationCode||x.code||x).trim().toLowerCase())
+    .filter(Boolean);
+
+  return allowed.includes(String(g.locationCode||"").trim().toLowerCase());
 }
 
 function updateBatchRequestControls(){
@@ -473,7 +478,7 @@ function openSingleRequest(key){
   requireDepositLogin(()=>{
     const g=groups.find(x=>groupDepositKey(x)===key);
     if(!g)return;
-    if(!isDepositEligible(g))return alert("You can only request your own Daily Cash group.");
+    if(!isDepositEligible(g))return alert("You can only request Daily Cash from your assigned Location Code.");
     if(pendingDepositGroups[key])return alert("This Daily Cash group already has a Processing Deposit Request.");
     openDepositRequest([g]);
   });
@@ -484,7 +489,7 @@ function openBatchRequest(){
     const picked=groups.filter(g=>selectedDepositGroups.has(groupDepositKey(g)));
     if(!picked.length)return alert("Please select at least one Daily Cash group.");
     const invalid=picked.find(g=>!isDepositEligible(g));
-    if(invalid)return alert("Batch Request can only include your own Daily Cash groups.");
+    if(invalid)return alert("Batch Request can only include Daily Cash from your assigned Location Codes.");
     const processing=picked.find(g=>pendingDepositGroups[groupDepositKey(g)]);
     if(processing)return alert("One selected group already has a Processing Deposit Request.");
     openDepositRequest(picked);
