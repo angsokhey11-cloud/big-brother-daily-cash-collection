@@ -936,21 +936,29 @@ async function sendCashRequest(){
   $("cashRequestError").classList.remove("show");
 
   try{
+    const requestPayload={
+      invoiceIds,
+      salesperson:invoices[0]?.salesperson||"",
+      closeMethod:method,
+      actualCashUSD:num($("actualCashUSD").value),
+      actualCashKHR:num($("actualCashKHR").value),
+      closingRate:num($("closingRate").value),
+      bankAccount:$("closeBankAccount").value.trim(),
+      transactionId:$("closeTransactionId").value.trim(),
+      depositRate:num($("depositRate").value),
+      bankDepositUSD:num($("bankDepositUSD").value),
+      note:$("cashRequestNote").value.trim()
+    };
+
     const d=await apiPost({
       action:"dccCreateRequest",
-      requestData:JSON.stringify({
-        invoiceIds,
-        salesperson:invoices[0]?.salesperson||"",
-        closeMethod:method,
-        actualCashUSD:num($("actualCashUSD").value),
-        actualCashKHR,
-        closingRate,
-        bankAccount:$("closeBankAccount").value.trim(),
-        transactionId:$("closeTransactionId").value.trim(),
-        depositRate:num($("depositRate").value),
-        bankDepositUSD:num($("bankDepositUSD").value),
-        note:$("cashRequestNote").value.trim()
-      })
+      requestData:JSON.stringify(requestPayload),
+
+      // Send the three matching values separately too.
+      // This prevents Apps Script form parsing from ever losing KHR/rate values.
+      actualCashUSD:requestPayload.actualCashUSD,
+      actualCashKHR:requestPayload.actualCashKHR,
+      closingRate:requestPayload.closingRate
     });
 
     closeCashRequest();
