@@ -151,6 +151,12 @@ tbody tr:hover{background:#f9fbfe}
   padding:8px 10px;
   font-size:12px;
 }
+.close-list-wrap .btn{
+  padding:6px 10px;
+  font-size:11px;
+  white-space:nowrap;
+}
+
 .close-pagination{
   padding:10px 16px;
   border-top:1px solid var(--line);
@@ -298,6 +304,7 @@ tbody tr:hover{background:#f9fbfe}
             </th>
             <th>Collection Date</th>
             <th>Invoice No</th>
+            <th>Salesman</th>
             <th>Location Name</th>
             <th>Customer Name</th>
             <th class="money">Cash USD</th>
@@ -309,7 +316,7 @@ tbody tr:hover{background:#f9fbfe}
           </tr>
         </thead>
         <tbody id="summaryBody">
-          <tr><td colspan="11" class="empty">Loading Daily Cash Collection...</td></tr>
+          <tr><td colspan="12" class="empty">Loading Daily Cash Collection...</td></tr>
         </tbody>
       </table>
     </div>
@@ -376,7 +383,7 @@ tbody tr:hover{background:#f9fbfe}
       </div>
 
       <div class="rulebar">
-        Batch rule: selected invoices must have the same Sale Date, same Location, and same Salesman. Salesman is checked automatically and hidden from this workspace.
+        Batch rule: selected invoices must have the same Sale Date, same Location, and same Salesman.
       </div>
 
       <div class="close-selectbar">
@@ -396,12 +403,14 @@ tbody tr:hover{background:#f9fbfe}
               <th>#</th>
               <th>Invoice No</th>
               <th>Customer Name</th>
+              <th>Salesman</th>
               <th>Sale Date</th>
               <th>Location</th>
               <th class="money">Cash USD</th>
               <th class="money">Cash KHR</th>
               <th class="money">Total USD</th>
               <th>Status</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody id="cashRequestList"></tbody>
@@ -905,7 +914,7 @@ function renderGroups(){
 
   if(!pageRows.length){
     $("summaryBody").innerHTML=
-      '<tr><td colspan="11" class="empty">No Daily Cash invoices found.</td></tr>';
+      '<tr><td colspan="12" class="empty">No Daily Cash invoices found.</td></tr>';
     if($("checkAllPage"))$("checkAllPage").checked=false;
     return;
   }
@@ -925,6 +934,7 @@ function renderGroups(){
       </td>
       <td><strong>${esc(g.saleDate)}</strong></td>
       <td><strong>${esc(g.invoices?.[0]?.invoiceNo||"-")}</strong></td>
+      <td>${esc(g.salesman||"-")}</td>
       <td><strong>${esc(g.locationName)}</strong></td>
       <td>${esc(g.invoices?.[0]?.customer||"-")}</td>
       <td class="money">${usd(g.cashUSD)}</td>
@@ -1242,12 +1252,17 @@ function renderCloseSelectedPage(){
       <td>${start+i+1}</td>
       <td><strong>${esc(inv.invoiceNo||"-")}</strong></td>
       <td>${esc(inv.customer||"-")}</td>
+      <td>${esc(g.salesman||"-")}</td>
       <td>${esc(g.saleDate||"-")}</td>
       <td>${esc(g.locationName||"-")}</td>
       <td class="money">${c==="USD"?usd(inv.amountPaid):usd(0)}</td>
       <td class="money">${c==="KHR"?khr(inv.amountPaid):khr(0)}</td>
       <td class="money">${Number.isFinite(expected)?usd(expected):"—"}</td>
       <td><span class="status-pill ${statusClass(invoiceRequestStatus(inv))}">${esc(invoiceRequestStatus(inv))}</span></td>
+      <td>
+        <button class="btn primary" type="button"
+          onclick='openPreview(${JSON.stringify(x.key)})'>Preview</button>
+      </td>
     </tr>`;
   }).join("");
 
@@ -1655,7 +1670,7 @@ async function loadInvoices(manual=false,silent=false){
     }else{
       showError(e.message||"Could not load sales invoice cash.");
       $("summaryBody").innerHTML=
-        '<tr><td colspan="11" class="empty">Could not load Daily Cash Collection.</td></tr>';
+        '<tr><td colspan="12" class="empty">Could not load Daily Cash Collection.</td></tr>';
       $("syncStatus").textContent="Load failed";
     }
   }finally{
