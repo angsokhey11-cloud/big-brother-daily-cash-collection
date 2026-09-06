@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIG BROTHER — Daily Cash Collection V3 Final Staff Request Flow</title>
+<title>BIG BROTHER — Daily Cash Collection V3.4 No Login</title>
 <style>
 :root{
   --bg:#f4f7fb;--card:#fff;--line:#dfe6ef;--text:#17304f;--muted:#6d7d91;
@@ -94,7 +94,7 @@ tbody tr:hover{background:#f9fbfe}
   <div class="topbar">
     <div>
       <h1>Daily Cash Collection</h1>
-      <p class="subtitle">Cash Sale invoices collected directly from Invoice History, grouped by Sale Date + Salesman + Location Name. USD and KHR are kept separately.</p>
+      <p class="subtitle">Cash Sale invoices collected directly from Invoice History. Each Cash invoice is shown separately. USD and KHR are kept separately.</p>
     </div>
     <span class="pill">Invoice History · Cash Sales Only</span>
   </div>
@@ -102,7 +102,7 @@ tbody tr:hover{background:#f9fbfe}
   <div id="errorBox" class="statusbar"></div>
 
   <div class="cards">
-    <div class="card"><small>Cash Collection Groups</small><strong id="cardGroups">0</strong></div>
+    <div class="card"><small>Cash Invoices</small><strong id="cardGroups">0</strong></div>
     <div class="card"><small>Cash USD</small><strong id="cardUsd">$0.00</strong></div>
     <div class="card"><small>Cash KHR</small><strong id="cardKhr">៛0</strong></div>
     <div class="card"><small>Cash Collection in USD</small><strong id="cardDailyUsd">$0.00</strong></div>
@@ -119,12 +119,12 @@ tbody tr:hover{background:#f9fbfe}
     </div>
 
     <div class="summary-toolbar">
-      <button class="btn primary" onclick="openDailyCashSummary()">▦ Daily Cash Summary</button>
+      <button class="btn primary" id="dailyCashSummaryBtn" onclick="openDailyCashSummary()" disabled>▦ Daily Cash Summary (0)</button>
     </div>
 
     <div class="requestbar">
       <div class="sum">
-        <span>Selected Groups<strong id="selectedGroupsCount">0</strong></span>
+        <span>Selected Rows<strong id="selectedGroupsCount">0</strong></span>
         <span>Selected Invoices<strong id="selectedInvoicesCount">0</strong></span>
         <span>Cash USD<strong id="selectedCashUSD">$0.00</strong></span>
         <span>Cash KHR<strong id="selectedCashKHR">៛0</strong></span>
@@ -139,9 +139,10 @@ tbody tr:hover{background:#f9fbfe}
           <tr>
             <th class="center">Select</th>
             <th>Collection Date</th>
+            <th>Invoice No</th>
             <th>Salesman</th>
             <th>Location Name</th>
-            <th class="center">Paid Invoices</th>
+            <th>Customer Name</th>
             <th class="money">Cash USD</th>
             <th class="money">Cash KHR</th>
             <th class="money">Avg. KHR Rate</th>
@@ -151,18 +152,18 @@ tbody tr:hover{background:#f9fbfe}
           </tr>
         </thead>
         <tbody id="summaryBody">
-          <tr><td colspan="11" class="empty">Loading Daily Cash Collection...</td></tr>
+          <tr><td colspan="12" class="empty">Loading Daily Cash Collection...</td></tr>
         </tbody>
       </table>
     </div>
 
     <div class="foot">
-      <span id="rowCount">0 cash collection groups</span>
+      <span id="rowCount">0 cash invoices</span>
       <span id="syncStatus">Smart Sync</span>
     </div>
 
     <div class="note">
-      Source: Invoice History. Only invoices with Payment Method = Cash are included. USD invoices stay in Cash USD and KHR invoices stay in Cash KHR. Cash Collection in USD = Cash USD + (Cash KHR ÷ Average Exchange Rate).
+      Source: Invoice History. Each Payment Method = Cash invoice is shown on its own row. USD invoices stay in Cash USD and KHR invoices stay in Cash KHR.
     </div>
   </div>
 </div>
@@ -202,17 +203,7 @@ tbody tr:hover{background:#f9fbfe}
 </div>
 
 
-<div class="overlay hidden" id="salesmanLoginOverlay">
-  <div class="loginbox">
-    <h2>Salesman Access</h2>
-    <p>Sign in with your Salesman Code to send Daily Cash Collection requests.</p>
-    <div class="field"><label>Salesman Code</label><input id="salesmanCode" autocomplete="off" placeholder="Enter Salesman Code"></div>
-    <div class="field"><label>PIN</label><input id="salesmanPin" type="password" placeholder="Enter PIN"></div>
-    <div class="formerror" id="salesmanLoginError"></div>
-    <button class="btn request" id="salesmanLoginBtn" style="width:100%;margin-top:12px" onclick="salesmanLogin()">Sign In</button>
-    <button class="btn secondary" style="width:100%;margin-top:8px" onclick="closeSalesmanLogin()">Cancel</button>
-  </div>
-</div>
+
 
 <div class="overlay hidden" id="cashRequestOverlay">
   <div class="requestbox">
@@ -243,7 +234,7 @@ tbody tr:hover{background:#f9fbfe}
     <div class="modal-actions">
       <div class="modal-title">
         <h2>Daily Cash Summary</h2>
-        <p id="dailyCashSummarySubtitle">All Cash invoices in your current filter.</p>
+        <p id="dailyCashSummarySubtitle">Selected Cash invoices only.</p>
       </div>
       <button class="btn secondary" onclick="closeDailyCashSummary()">✕ Close</button>
     </div>
@@ -422,11 +413,12 @@ async function loadLocationMap(){
 }
 
 function groupKey(inv){
-  return [
+  // One Daily Cash row = one exact invoice.
+  return String(inv.invoiceId||inv.invoiceNo||[
     dateOnly(inv.invoiceDate),
     String(inv.salesperson||"").trim(),
     String(inv.locationCode||"").trim()
-  ].join("|||");
+  ].join("|||")).trim();
 }
 
 function isInvoiceCash(inv){
@@ -510,21 +502,13 @@ function calculateGroup(list){
 }
 
 function buildGroups(){
-  const map=new Map();
-
-  allInvoices.filter(isInvoiceCash).forEach(inv=>{
-    const key=groupKey(inv);
-    if(!map.has(key)) map.set(key,[]);
-    map.get(key).push(inv);
-  });
-
-  groups=[...map.values()]
-    .map(calculateGroup)
+  groups=allInvoices
+    .filter(isInvoiceCash)
+    .map(inv=>calculateGroup([inv]))
     .filter(g=>g.invoiceCount>0)
     .sort((a,b)=>
       b.saleDate.localeCompare(a.saleDate) ||
-      a.salesman.localeCompare(b.salesman) ||
-      a.locationName.localeCompare(b.locationName)
+      String(b.invoices?.[0]?.invoiceNo||"").localeCompare(String(a.invoices?.[0]?.invoiceNo||""))
     );
 
   populateFilters();
@@ -608,7 +592,7 @@ function statusClass(text){
 
 function renderGroups(){
   $("rowCount").textContent=
-    `${filteredGroups.length} cash collection group${filteredGroups.length===1?"":"s"}`;
+    `${filteredGroups.length} cash invoice${filteredGroups.length===1?"":"s"}`;
 
   $("cardGroups").textContent=filteredGroups.length;
 
@@ -626,7 +610,7 @@ function renderGroups(){
 
   if(!filteredGroups.length){
     $("summaryBody").innerHTML=
-      '<tr><td colspan="11" class="empty">No Daily Cash groups found.</td></tr>';
+      '<tr><td colspan="12" class="empty">No Daily Cash groups found.</td></tr>';
     return;
   }
 
@@ -644,9 +628,10 @@ function renderGroups(){
           onchange='toggleGroupSelection(${JSON.stringify(g.key)},this.checked)'>
       </td>
       <td><strong>${esc(g.saleDate)}</strong></td>
+      <td><strong>${esc(g.invoices?.[0]?.invoiceNo||"-")}</strong></td>
       <td>${esc(g.salesman)}</td>
       <td><strong>${esc(g.locationName)}</strong></td>
-      <td class="center">${g.invoiceCount}</td>
+      <td>${esc(g.invoices?.[0]?.customer||"-")}</td>
       <td class="money">${usd(g.cashUSD)}</td>
       <td class="money">${khr(g.cashKHR)}</td>
       <td class="money ${g.rateComplete?"":"warn"}">
@@ -701,6 +686,12 @@ function updateSelectedSummary(){
   const btn=$("batchRequestBtn");
   btn.disabled=picked.length<2;
   btn.textContent=`Batch Request (${picked.length})`;
+
+  const summaryBtn=$("dailyCashSummaryBtn");
+  if(summaryBtn){
+    summaryBtn.disabled=invoiceCount===0;
+    summaryBtn.textContent=`▦ Daily Cash Summary (${invoiceCount})`;
+  }
 }
 
 function toggleGroupSelection(key,checked){
@@ -715,17 +706,10 @@ function clearSelection(){
 }
 
 async function loadRequestState(){
-  if(!salesmanSessionToken){
-    invoiceStates={};
-    lockedInvoices={};
-    buildGroups();
-    return;
-  }
-
   try{
     const d=await api({
       action:"dccMyState",
-      sessionToken:salesmanSessionToken,
+      sessionToken:salesmanSessionToken||"",
       _ts:Date.now()
     });
 
@@ -749,70 +733,23 @@ async function loadRequestState(){
   }
 }
 
-function setSalesmanLoginError(msg){
-  $("salesmanLoginError").textContent=msg||"";
-  $("salesmanLoginError").classList.toggle("show",!!msg);
-}
 
-function openSalesmanLogin(action){
-  pendingAction=action||null;
-  setSalesmanLoginError("");
-  $("salesmanLoginOverlay").classList.remove("hidden");
-  setTimeout(()=>$("salesmanCode").focus(),50);
-}
 
-function closeSalesmanLogin(){
-  $("salesmanLoginOverlay").classList.add("hidden");
-  pendingAction=null;
-}
 
-async function salesmanLogin(){
-  const code=$("salesmanCode").value.trim();
-  const pin=$("salesmanPin").value.trim();
-  if(!code||!pin)return setSalesmanLoginError("Salesman Code and PIN are required.");
 
-  const btn=$("salesmanLoginBtn");
-  btn.disabled=true;btn.textContent="Signing In…";setSalesmanLoginError("");
 
-  try{
-    const d=await apiPost({
-      action:"arLogin",
-      role:"salesman",
-      salesmanCode:code,
-      pin:pin
-    });
 
-    if(!d||!d.authorized||!d.sessionToken)throw new Error(d?.error||"Salesman login failed.");
-
-    salesmanSessionToken=d.sessionToken;
-    sessionStorage.setItem("bb_ar_salesman_session",salesmanSessionToken);
-    $("salesmanLoginOverlay").classList.add("hidden");
-
-    const next=pendingAction;
-    pendingAction=null;
-
-    await loadRequestState();
-    if(typeof next==="function")next();
-  }catch(e){
-    setSalesmanLoginError(e.message||"Salesman login failed.");
-  }finally{
-    btn.disabled=false;btn.textContent="Sign In";
-  }
-}
+async 
 
 function requireSalesman(action){
-  if(salesmanSessionToken){
-    action();
-    return;
-  }
-  openSalesmanLogin(action);
+  if(typeof action==="function")action();
 }
 
 function openSingleRequest(key){
   requireSalesman(()=>{
     const g=groups.find(x=>x.key===key);
     if(!g)return;
-    if(!groupAvailableInvoices(g).length)return alert("This Daily Cash group has no invoice available to request.");
+    if(!groupAvailableInvoices(g).length)return alert("This Cash invoice is not available to request.");
     openCashRequest([g]);
   });
 }
@@ -820,7 +757,7 @@ function openSingleRequest(key){
 function openBatchRequest(){
   requireSalesman(()=>{
     const picked=selectedGroupObjects().filter(g=>groupAvailableInvoices(g).length>0);
-    if(picked.length<2)return alert("Please select at least 2 Daily Cash groups with available invoices for Batch Request.");
+    if(picked.length<2)return alert("Please select at least 2 Cash invoices for Batch Request.");
     openCashRequest(picked);
   });
 }
@@ -838,14 +775,20 @@ function openCashRequest(picked){
 
   $("cashRequestTitle").textContent=requestGroups.length===1?"Daily Cash Request":"Batch Daily Cash Request";
   $("cashRequestInfo").textContent=
-    `${requestGroups.length} group${requestGroups.length===1?"":"s"} · ${invoices.length} available Cash invoice${invoices.length===1?"":"s"} · USD ${usd(cashUSD)} · KHR ${khr(cashKHR)}`;
+    `${invoices.length} Cash invoice${invoices.length===1?"":"s"} selected · USD ${usd(cashUSD)} · KHR ${khr(cashKHR)}`;
 
-  $("cashRequestList").innerHTML=requestGroups.map(g=>`
+  $("cashRequestList").innerHTML=requestGroups.map(g=>{
+    const inv=g.invoices?.[0]||{};
+    const c=String(inv.currency||"USD").toUpperCase();
+    return `
     <div class="selected-item">
-      <span><strong>${esc(g.saleDate)} · ${esc(g.locationName)}</strong><br>${esc(g.salesman)} · ${g.invoices.length} available invoice${g.invoices.length===1?"":"s"}</span>
-      <span style="text-align:right"><strong>${usd(g.invoices.filter(x=>String(x.currency||"").toUpperCase()==="USD").reduce((s,x)=>s+num(x.amountPaid),0))}</strong><br>${khr(g.invoices.filter(x=>String(x.currency||"").toUpperCase()==="KHR").reduce((s,x)=>s+num(x.amountPaid),0))}</span>
-    </div>
-  `).join("");
+      <span>
+        <strong>${esc(inv.invoiceNo||"-")} · ${esc(inv.customer||"-")}</strong><br>
+        ${esc(g.saleDate)} · ${esc(g.salesman)} · ${esc(g.locationName)}
+      </span>
+      <span style="text-align:right"><strong>${c==="KHR"?khr(inv.amountPaid):usd(inv.amountPaid)}</strong></span>
+    </div>`;
+  }).join("");
 
   $("cashBankStatus").value="no";
   $("cashBankFields").style.display="none";
@@ -873,7 +816,7 @@ function closeCashRequest(){
 }
 
 async function sendCashRequest(){
-  if(!requestGroups.length||!salesmanSessionToken)return;
+  if(!requestGroups.length)return;
 
   const invoiceIds=[...new Set(
     requestGroups.flatMap(g=>groupInvoiceIds(g))
@@ -902,7 +845,7 @@ async function sendCashRequest(){
     const d=await apiPost({
       action:"dccCreateRequest",
       requestData:JSON.stringify({
-        sessionToken:salesmanSessionToken,
+        sessionToken:salesmanSessionToken||"",
         invoiceIds,
         alreadyDepositedBank:$("cashBankStatus").value==="yes",
         bankAccount:$("cashBankAccount").value.trim(),
@@ -931,30 +874,49 @@ async function sendCashRequest(){
 }
 
 
-function visibleCashInvoices(){
-  return filteredGroups
-    .flatMap(g=>g.invoices.map(inv=>({...inv,locationName:g.locationName,saleDate:g.saleDate})))
-    .sort((a,b)=>String(b.saleDate||"").localeCompare(String(a.saleDate||"")) || String(b.invoiceNo||"").localeCompare(String(a.invoiceNo||"")));
+function selectedCashInvoicesForSummary(){
+  return selectedGroupObjects()
+    .flatMap(g=>(g.invoices||[]).map(inv=>({
+      ...inv,
+      locationName:g.locationName,
+      saleDate:g.saleDate
+    })))
+    .sort((a,b)=>
+      String(b.saleDate||"").localeCompare(String(a.saleDate||"")) ||
+      String(b.invoiceNo||"").localeCompare(String(a.invoiceNo||""))
+    );
 }
 
 function openDailyCashSummary(){
-  const rows=visibleCashInvoices();
-  const usdTotal=rows.filter(x=>String(x.currency||"USD").toUpperCase()==="USD").reduce((s,x)=>s+num(x.amountPaid),0);
-  const khrTotal=rows.filter(x=>String(x.currency||"USD").toUpperCase()==="KHR").reduce((s,x)=>s+num(x.amountPaid),0);
+  const rows=selectedCashInvoicesForSummary();
+
+  if(!rows.length){
+    alert("Please select Cash invoice data first.");
+    return;
+  }
+
+  const usdTotal=rows
+    .filter(x=>String(x.currency||"USD").toUpperCase()==="USD")
+    .reduce((s,x)=>s+num(x.amountPaid),0);
+
+  const khrTotal=rows
+    .filter(x=>String(x.currency||"USD").toUpperCase()==="KHR")
+    .reduce((s,x)=>s+num(x.amountPaid),0);
 
   $("dailyCashSummarySubtitle").textContent=
-    `${rows.length} Cash invoice${rows.length===1?"":"s"} in your current filter`;
+    `${rows.length} selected Cash invoice${rows.length===1?"":"s"} for preview`;
 
   $("dailyCashSummaryMeta").innerHTML=`
-    <div class="meta-box"><small>Cash Invoices</small><strong>${rows.length}</strong></div>
+    <div class="meta-box"><small>Selected Cash Invoices</small><strong>${rows.length}</strong></div>
     <div class="meta-box"><small>Cash USD</small><strong>${usd(usdTotal)}</strong></div>
     <div class="meta-box"><small>Cash KHR</small><strong>${khr(khrTotal)}</strong></div>
     <div class="meta-box"><small>Pending Requests</small><strong>${rows.filter(x=>invoiceRequestStatus(x)==="Pending").length}</strong></div>
   `;
 
-  $("dailyCashSummaryBody").innerHTML=rows.length?rows.map(inv=>{
+  $("dailyCashSummaryBody").innerHTML=rows.map(inv=>{
     const c=String(inv.currency||"USD").toUpperCase();
     const st=invoiceRequestStatus(inv);
+
     return `<tr>
       <td>${esc(inv.saleDate||String(inv.invoiceDate||"").slice(0,10))}</td>
       <td><strong>${esc(inv.invoiceNo)}</strong></td>
@@ -966,7 +928,7 @@ function openDailyCashSummary(){
       <td><span class="status-pill ${statusClass(st)}">${esc(st)}</span></td>
       <td><button class="btn primary" onclick='showDailyCashInvoiceDetail(${JSON.stringify(inv.invoiceNo)})'>View Invoice</button></td>
     </tr>`;
-  }).join(""):'<tr><td colspan="9" class="empty">No Cash invoice in the current filter.</td></tr>';
+  }).join("");
 
   $("dailyCashInvoiceDetailPanel").classList.add("hidden");
   $("dailyCashSummaryOverlay").classList.remove("hidden");
@@ -1094,7 +1056,7 @@ async function loadInvoices(manual=false,silent=false){
     }else{
       showError(e.message||"Could not load sales invoice cash.");
       $("summaryBody").innerHTML=
-        '<tr><td colspan="11" class="empty">Could not load Daily Cash Collection.</td></tr>';
+        '<tr><td colspan="12" class="empty">Could not load Daily Cash Collection.</td></tr>';
       $("syncStatus").textContent="Load failed";
     }
   }finally{
@@ -1115,6 +1077,13 @@ async function smartSync(force=false){
     const revision=await getRevision();
 
     if(lastRevision && revision===lastRevision){
+      // Invoice data may be unchanged while Daily Cash request status changed.
+      // Refresh request state independently so Pending/Approved/Deposited
+      // never falls back to Not Requested.
+      if(salesmanSessionToken){
+        await loadRequestState();
+      }
+
       $("syncStatus").textContent="Up to date • auto sync 20s";
       return;
     }
@@ -1168,7 +1137,7 @@ async function openPreview(key){
     <div class="meta-box"><small>Collection Date</small><strong>${esc(g.saleDate)}</strong></div>
     <div class="meta-box"><small>Salesman</small><strong>${esc(g.salesman)}</strong></div>
     <div class="meta-box"><small>Location Name</small><strong>${esc(g.locationName)}</strong></div>
-    <div class="meta-box"><small>Cash Invoices</small><strong>${g.invoiceCount}</strong></div>
+    <div class="meta-box"><small>Invoice No</small><strong>${esc(g.invoices?.[0]?.invoiceNo||"-")}</strong></div>
   `;
 
   $("previewBody").innerHTML=g.invoices.map(inv=>{
@@ -1224,9 +1193,22 @@ function closePreview(){
   if(cached){
     await loadLocationMap();
     buildGroups();
+
+    // Invoice cache does not contain Daily Cash request status.
+    // Reload request status every time the page starts so Pending invoices
+    // remain Pending after refresh/restart.
+    if(salesmanSessionToken){
+      await loadRequestState();
+    }
+
     await smartSync(true);
   }else{
     await loadInvoices(false,false);
+
+    // Extra safety: restore request state after the first invoice load too.
+    if(salesmanSessionToken){
+      await loadRequestState();
+    }
   }
 
   startSmartSync();
