@@ -163,7 +163,7 @@ tbody tr:hover{background:#f9fbfe}
     </div>
 
     <div class="note">
-      Source: Invoice History. Only OPEN Cash invoices are shown. Once a Daily Cash Close is submitted, that invoice disappears from this working list.
+      Source: Invoice History. OPEN and PENDING Cash invoices are shown. Pending stays visible until Admin approves; approved/closed invoices disappear.
     </div>
   </div>
 </div>
@@ -290,6 +290,7 @@ const SALES_API="https://script.google.com/macros/s/AKfycbyM5mUlz5SeMZ_oPJCo2FgL
 const MASTER_API="https://script.google.com/macros/s/AKfycbzIjs-cNehMxWTZs3ZPAosseGUu1nqACTPo3S4-onLLEYnEgqP6AUK7p3jwb6MaFr7H0w/exec";
 
 const CACHE_KEY="BB_DAILY_CASH_COLLECTION_CACHE_V1";
+const CLOSE_STATE_CACHE_KEY="BB_DAILY_CASH_CLOSE_STATE_V1";
 const SYNC_INTERVAL_MS=20000;
 
 const $=id=>document.getElementById(id);
@@ -298,7 +299,6 @@ let allInvoices=[];
 let selectedGroups=new Set();
 let invoiceStates={};
 let lockedInvoices={};
-let closeStateReady=false;
 let invoiceDetailCache={};
 let requestGroups=[];
 let salesmanSessionToken=sessionStorage.getItem("bb_ar_salesman_session")||"";
@@ -320,6 +320,23 @@ function esc(v){
 function num(v){
   const n=Number(v);
   return Number.isFinite(n)?n:0;
+}
+
+function readCloseStateCache(){
+  try{
+    const raw=localStorage.getItem(CLOSE_STATE_CACHE_KEY);
+    if(!raw)return {};
+    const d=JSON.parse(raw);
+    return d&&typeof d==="object"?d:{};
+  }catch(_){
+    return {};
+  }
+}
+
+function saveCloseStateCache(){
+  try{
+    localStorage.setItem(CLOSE_STATE_CACHE_KEY,JSON.stringify(invoiceStates||{}));
+  }catch(_){}
 }
 
 function dateOnly(v){
@@ -536,10 +553,9 @@ function buildGroups(){
       const inv=g.invoices?.[0];
       const status=invoiceRequestStatus(inv);
 
-      // Daily Cash page is for OPEN invoices only.
-      // Once an invoice is Pending, In Vault, Deposited, Approved, etc.
-      // it disappears completely from this working list.
-      return status==="Open";
+      // Keep OPEN and PENDING visible.
+      // Hide only after Admin approval / final close stage.
+      return !["In Vault","Deposited","Approved"].includes(status);
     })
     .sort((a,b)=>
       b.saleDate.localeCompare(a.saleDate) ||
@@ -627,12 +643,6 @@ function statusClass(text){
 }
 
 function renderGroups(){
-  if(!closeStateReady){
-    $("summaryBody").innerHTML='<tr><td colspan="12" class="empty">Checking Daily Cash close status...</td></tr>';
-    $("rowCount").textContent="Checking close status...";
-    return;
-  }
-
   $("rowCount").textContent=
     `${filteredGroups.length} cash invoice${filteredGroups.length===1?"":"s"}`;
 
@@ -752,7 +762,7 @@ async function loadRequestState(){
     const d=await api({action:"dccMyState",_ts:Date.now()});
     invoiceStates=d.invoiceStates||d.lockedInvoices||{};
     lockedInvoices=invoiceStates;
-    closeStateReady=true;
+    saveCloseStateCache();
 
     buildGroups();
 
@@ -767,9 +777,7 @@ async function loadRequestState(){
     renderGroups();
   }catch(e){
     console.warn("Daily Cash close state:",e);
-    closeStateReady=false;
-    $("summaryBody").innerHTML='<tr><td colspan="12" class="empty">Could not verify Daily Cash close status. Please refresh.</td></tr>';
-    $("rowCount").textContent="Close status unavailable";
+    // Keep cached/current data visible and retry on next sync.
   }
 }
 
@@ -982,9 +990,19 @@ async function sendCashRequest(){
       closingRate:requestPayload.closingRate
     });
 
-    // Remove the just-closed invoices from the working screen immediately.
-    const closedIds=new Set(invoiceIds);
-    allInvoices=allInvoices.filter(inv=>!closedIds.has(String(inv.invoiceId||"").trim()));
+    // Keep submitted invoices visible as PENDING until Admin approves.
+    invoiceIds.forEach(id=>{
+      invoiceStates[id]={
+        closeId:d.closeId||d.requestId||"",
+        requestId:d.closeId||d.requestId||"",
+        status:"Pending",
+        rawStatus:"Processing",
+        canRequest:false
+      };
+    });
+    lockedInvoices=invoiceStates;
+    saveCloseStateCache();
+
     selectedGroups.clear();
     closeCashRequest();
     buildGroups();
@@ -1139,6 +1157,10 @@ function showCache(){
   lastRevision=String(c.revision||"");
   allInvoices=c.invoices;
   if(c.locationMap && typeof c.locationMap==="object") locationMap=c.locationMap;
+
+  invoiceStates=readCloseStateCache();
+  lockedInvoices=invoiceStates;
+
   buildGroups();
   $("syncStatus").textContent="Cached • checking for updates...";
   return true;
@@ -1322,27 +1344,22 @@ function closePreview(){
 }
 
 (async function init(){
+  invoiceStates=readCloseStateCache();
+  lockedInvoices=invoiceStates;
+
   const cached=showCache();
 
   if(cached){
-    await loadLocationMap();
-    buildGroups();
-
-    // Invoice cache does not contain Daily Cash request status.
-    // Reload request status every time the page starts so Pending invoices
-    // remain Pending after refresh/restart.
-    if(salesmanSessionToken){
-      await loadRequestState();
-    }
-
-    await smartSync(true);
+    // Show cached invoice + close status immediately.
+    // Refresh authoritative data quietly in the background.
+    Promise.allSettled([
+      loadLocationMap(),
+      loadRequestState(),
+      smartSync(true)
+    ]);
   }else{
     await loadInvoices(false,false);
-
-    // Extra safety: restore request state after the first invoice load too.
-    if(salesmanSessionToken){
-      await loadRequestState();
-    }
+    await loadRequestState();
   }
 
   startSmartSync();
