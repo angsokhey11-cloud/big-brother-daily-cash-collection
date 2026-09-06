@@ -163,7 +163,7 @@ tbody tr:hover{background:#f9fbfe}
     </div>
 
     <div class="note">
-      Source: Invoice History. Each Payment Method = Cash invoice is shown on its own row. USD invoices stay in Cash USD and KHR invoices stay in Cash KHR.
+      Source: Invoice History. Only OPEN Cash invoices are shown. Once a Daily Cash Close is submitted, that invoice disappears from this working list.
     </div>
   </div>
 </div>
@@ -298,6 +298,7 @@ let allInvoices=[];
 let selectedGroups=new Set();
 let invoiceStates={};
 let lockedInvoices={};
+let closeStateReady=false;
 let invoiceDetailCache={};
 let requestGroups=[];
 let salesmanSessionToken=sessionStorage.getItem("bb_ar_salesman_session")||"";
@@ -529,7 +530,17 @@ function buildGroups(){
   groups=allInvoices
     .filter(isInvoiceCash)
     .map(inv=>calculateGroup([inv]))
-    .filter(g=>g.invoiceCount>0)
+    .filter(g=>{
+      if(g.invoiceCount<=0)return false;
+
+      const inv=g.invoices?.[0];
+      const status=invoiceRequestStatus(inv);
+
+      // Daily Cash page is for OPEN invoices only.
+      // Once an invoice is Pending, In Vault, Deposited, Approved, etc.
+      // it disappears completely from this working list.
+      return status==="Open";
+    })
     .sort((a,b)=>
       b.saleDate.localeCompare(a.saleDate) ||
       String(b.invoices?.[0]?.invoiceNo||"").localeCompare(String(a.invoices?.[0]?.invoiceNo||""))
@@ -616,6 +627,12 @@ function statusClass(text){
 }
 
 function renderGroups(){
+  if(!closeStateReady){
+    $("summaryBody").innerHTML='<tr><td colspan="12" class="empty">Checking Daily Cash close status...</td></tr>';
+    $("rowCount").textContent="Checking close status...";
+    return;
+  }
+
   $("rowCount").textContent=
     `${filteredGroups.length} cash invoice${filteredGroups.length===1?"":"s"}`;
 
@@ -735,6 +752,7 @@ async function loadRequestState(){
     const d=await api({action:"dccMyState",_ts:Date.now()});
     invoiceStates=d.invoiceStates||d.lockedInvoices||{};
     lockedInvoices=invoiceStates;
+    closeStateReady=true;
 
     buildGroups();
 
@@ -749,6 +767,9 @@ async function loadRequestState(){
     renderGroups();
   }catch(e){
     console.warn("Daily Cash close state:",e);
+    closeStateReady=false;
+    $("summaryBody").innerHTML='<tr><td colspan="12" class="empty">Could not verify Daily Cash close status. Please refresh.</td></tr>';
+    $("rowCount").textContent="Close status unavailable";
   }
 }
 
@@ -961,8 +982,14 @@ async function sendCashRequest(){
       closingRate:requestPayload.closingRate
     });
 
-    closeCashRequest();
+    // Remove the just-closed invoices from the working screen immediately.
+    const closedIds=new Set(invoiceIds);
+    allInvoices=allInvoices.filter(inv=>!closedIds.has(String(inv.invoiceId||"").trim()));
     selectedGroups.clear();
+    closeCashRequest();
+    buildGroups();
+
+    // Then confirm authoritative state from backend.
     await loadRequestState();
 
     alert(
