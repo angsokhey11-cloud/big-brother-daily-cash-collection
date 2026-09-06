@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIG BROTHER — Daily Cash Collection V2.2 Invoice Lock Unique Transaction</title>
+<title>BIG BROTHER — Daily Cash Collection V3 Final Staff Request Flow</title>
 <style>
 :root{
   --bg:#f4f7fb;--card:#fff;--line:#dfe6ef;--text:#17304f;--muted:#6d7d91;
@@ -71,6 +71,16 @@ tbody tr:hover{background:#f9fbfe}
 .selected-item{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-bottom:1px solid var(--line)}
 .selected-item:last-child{border-bottom:0}
 .status-pill{display:inline-block;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:800;background:#e9f2ff;color:#1f5fbf}
+.status-pill.pending{background:#fff5d8;color:#8a6500}
+.status-pill.pending-deposit{background:#fff0dc;color:#a05d00}
+.status-pill.deposited{background:#e8f7ef;color:#18764b}
+.status-pill.available{background:#eaf3ff;color:#1f5fbf}
+.status-pill.mixed{background:#f0edf9;color:#6649a8}
+.products-cell{white-space:normal;min-width:240px;line-height:1.45}
+.summary-toolbar{display:flex;justify-content:flex-end;padding:0 14px 12px}
+.summary-modal{width:min(1350px,98vw);max-height:95vh;overflow:auto;background:#eef2f7;border-radius:16px;padding:16px;box-shadow:0 25px 70px rgba(0,0,0,.3)}
+.invoice-detail-panel{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
+.product-chip{display:inline-block;background:#f0f5fb;border:1px solid #dbe5ef;border-radius:999px;padding:4px 8px;margin:2px;font-size:11px}
 .totals{margin-top:16px;margin-left:auto;width:min(560px,100%);border-top:3px solid #2456a6;padding-top:7px}
 .total-row{display:flex;justify-content:space-between;gap:16px;padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:13px}
 .total-row.key{background:#eef5ff;color:#143d78;font-size:15px;font-weight:900}
@@ -106,6 +116,10 @@ tbody tr:hover{background:#f9fbfe}
       <select id="locationFilter" onchange="applyFilters()"><option value="">All Locations</option></select>
       <button class="btn secondary" onclick="clearFilters()">Clear</button>
       <button class="btn primary" id="refreshBtn" onclick="loadInvoices(true,false)">↻ Refresh</button>
+    </div>
+
+    <div class="summary-toolbar">
+      <button class="btn primary" onclick="openDailyCashSummary()">▦ Daily Cash Summary</button>
     </div>
 
     <div class="requestbar">
@@ -171,11 +185,12 @@ tbody tr:hover{background:#f9fbfe}
             <tr>
               <th>Invoice No</th>
               <th>Customer</th>
+              <th>Products Bought</th>
               <th>Payment Method</th>
               <th>Currency</th>
               <th class="money">Exchange Rate</th>
               <th class="money">Cash Collected</th>
-              <th>Status</th>
+              <th>Request Status</th>
             </tr>
           </thead>
           <tbody id="previewBody"></tbody>
@@ -207,18 +222,51 @@ tbody tr:hover{background:#f9fbfe}
     <div class="field">
       <label>Deposit Status</label>
       <select id="cashBankStatus" onchange="toggleCashBankFields()" style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;font:inherit">
-        <option value="no">Not Yet Deposited to Bank</option>
-        <option value="yes">Already Deposited to Bank</option>
+        <option value="no">Not Yet Deposit — Give Real Cash to Accountant</option>
+        <option value="yes">Already Deposit — Money Already in Company Bank</option>
       </select>
     </div>
     <div id="cashBankFields" style="display:none">
       <div class="field"><label>Bank Account</label><input id="cashBankAccount" placeholder="Example: ABA USD / ACLEDA KHR"></div>
-      <div class="field"><label>Fresh Transaction ID</label><input id="cashBankReference" placeholder="Enter unique bank transaction ID"></div>
+      <div class="field"><label>Bank Transaction ID</label><input id="cashBankReference" placeholder="Enter fresh unique Bank Transaction ID"></div>
     </div>
     <div class="field"><label>Note <span style="font-weight:400;color:#7a8798">(optional)</span></label><textarea id="cashRequestNote" rows="2" placeholder="Add note for Admin"></textarea></div>
     <div class="formerror" id="cashRequestError"></div>
     <button class="btn request" id="sendCashRequestBtn" style="width:100%;margin-top:12px" onclick="sendCashRequest()">✓ Send Request to Admin</button>
     <button class="btn secondary" style="width:100%;margin-top:8px" onclick="closeCashRequest()">Cancel</button>
+  </div>
+</div>
+
+
+<div class="overlay hidden" id="dailyCashSummaryOverlay">
+  <div class="summary-modal">
+    <div class="modal-actions">
+      <div class="modal-title">
+        <h2>Daily Cash Summary</h2>
+        <p id="dailyCashSummarySubtitle">All Cash invoices in your current filter.</p>
+      </div>
+      <button class="btn secondary" onclick="closeDailyCashSummary()">✕ Close</button>
+    </div>
+
+    <div class="detail-card">
+      <div class="preview-meta" id="dailyCashSummaryMeta"></div>
+      <div class="tablewrap">
+        <table class="preview-table" style="min-width:1150px">
+          <thead>
+            <tr>
+              <th>Date</th><th>Invoice No</th><th>Customer</th><th>Salesman</th>
+              <th>Location</th><th>Currency</th><th class="money">Cash Amount</th>
+              <th>Request Status</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="dailyCashSummaryBody"></tbody>
+        </table>
+      </div>
+      <div class="invoice-detail-panel hidden" id="dailyCashInvoiceDetailPanel">
+        <h3 id="dailyCashInvoiceDetailTitle" style="margin:0 0 8px"></h3>
+        <div id="dailyCashInvoiceDetailContent"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -233,7 +281,9 @@ const $=id=>document.getElementById(id);
 
 let allInvoices=[];
 let selectedGroups=new Set();
+let invoiceStates={};
 let lockedInvoices={};
+let invoiceDetailCache={};
 let requestGroups=[];
 let salesmanSessionToken=sessionStorage.getItem("bb_ar_salesman_session")||"";
 let pendingAction=null;
@@ -462,21 +512,7 @@ function calculateGroup(list){
 function buildGroups(){
   const map=new Map();
 
-  allInvoices.filter(inv=>{
-    if(!isInvoiceCash(inv))return false;
-
-    const persistentStatus=String(
-      inv.dailyCashRequestStatus ||
-      inv["Daily Cash Request Status"] ||
-      ""
-    ).trim().toLowerCase();
-
-    if(["processing","pending","approved","deposited"].includes(persistentStatus)){
-      return false;
-    }
-
-    return !lockedInvoices[String(inv.invoiceId||'').trim()];
-  }).forEach(inv=>{
+  allInvoices.filter(isInvoiceCash).forEach(inv=>{
     const key=groupKey(inv);
     if(!map.has(key)) map.set(key,[]);
     map.get(key).push(inv);
@@ -535,6 +571,41 @@ function applyFilters(){
   renderGroups();
 }
 
+
+function invoiceRequestState(inv){
+  const id=String(inv?.invoiceId||"").trim();
+  return invoiceStates[id]||null;
+}
+
+function invoiceRequestStatus(inv){
+  const s=invoiceRequestState(inv);
+  return s?.status||"Not Requested";
+}
+
+function invoiceCanRequest(inv){
+  return !invoiceRequestState(inv);
+}
+
+function groupAvailableInvoices(g){
+  return (g?.invoices||[]).filter(invoiceCanRequest);
+}
+
+function groupRequestStatus(g){
+  const statuses=[...new Set((g?.invoices||[]).map(invoiceRequestStatus))];
+  if(!statuses.length)return "Not Requested";
+  if(statuses.length===1)return statuses[0];
+  return "Mixed";
+}
+
+function statusClass(text){
+  const s=String(text||"").toLowerCase();
+  if(s==="pending")return "pending";
+  if(s==="pending deposit")return "pending-deposit";
+  if(s==="deposited")return "deposited";
+  if(s==="mixed")return "mixed";
+  return "available";
+}
+
 function renderGroups(){
   $("rowCount").textContent=
     `${filteredGroups.length} cash collection group${filteredGroups.length===1?"":"s"}`;
@@ -559,9 +630,19 @@ function renderGroups(){
     return;
   }
 
-  $("summaryBody").innerHTML=filteredGroups.map(g=>`
+  $("summaryBody").innerHTML=filteredGroups.map(g=>{
+    const available=groupAvailableInvoices(g);
+    const groupStatus=groupRequestStatus(g);
+    const canRequest=available.length>0;
+
+    return `
     <tr>
-      <td class="center"><input class="select-box" type="checkbox" ${selectedGroups.has(g.key)?"checked":""} onchange='toggleGroupSelection(${JSON.stringify(g.key)},this.checked)'></td>
+      <td class="center">
+        <input class="select-box" type="checkbox"
+          ${selectedGroups.has(g.key)?"checked":""}
+          ${canRequest?"":"disabled"}
+          onchange='toggleGroupSelection(${JSON.stringify(g.key)},this.checked)'>
+      </td>
       <td><strong>${esc(g.saleDate)}</strong></td>
       <td>${esc(g.salesman)}</td>
       <td><strong>${esc(g.locationName)}</strong></td>
@@ -574,13 +655,18 @@ function renderGroups(){
       <td class="money daily-key">
         ${g.dailyCashUSD==null?"—":usd(g.dailyCashUSD)}
       </td>
-      <td><span class="status-pill">Not Requested</span></td>
+      <td>
+        <span class="status-pill ${statusClass(groupStatus)}">${esc(groupStatus)}</span>
+        ${canRequest&&available.length<g.invoiceCount?`<div style="font-size:10px;color:var(--muted);margin-top:4px">${available.length} new invoice${available.length===1?"":"s"} available</div>`:""}
+      </td>
       <td>
         <button class="btn primary" onclick='openPreview(${JSON.stringify(g.key)})'>Preview</button>
-        <button class="btn request" onclick='openSingleRequest(${JSON.stringify(g.key)})'>Request</button>
+        ${canRequest
+          ? `<button class="btn request" onclick='openSingleRequest(${JSON.stringify(g.key)})'>Request ${available.length<g.invoiceCount?"Available":""}</button>`
+          : `<button class="btn request" disabled>${groupStatus}</button>`}
       </td>
-    </tr>
-  `).join("");
+    </tr>`;
+  }).join("");
 }
 
 function clearFilters(){
@@ -602,9 +688,10 @@ function selectedGroupObjects(){
 
 function updateSelectedSummary(){
   const picked=selectedGroupObjects();
-  const invoiceCount=picked.reduce((s,g)=>s+g.invoiceCount,0);
-  const cashUSD=picked.reduce((s,g)=>s+g.cashUSD,0);
-  const cashKHR=picked.reduce((s,g)=>s+g.cashKHR,0);
+  const available=picked.flatMap(groupAvailableInvoices);
+  const invoiceCount=available.length;
+  const cashUSD=available.filter(x=>String(x.currency||"USD").toUpperCase()==="USD").reduce((s,x)=>s+num(x.amountPaid),0);
+  const cashKHR=available.filter(x=>String(x.currency||"USD").toUpperCase()==="KHR").reduce((s,x)=>s+num(x.amountPaid),0);
 
   $("selectedGroupsCount").textContent=picked.length;
   $("selectedInvoicesCount").textContent=invoiceCount;
@@ -629,6 +716,7 @@ function clearSelection(){
 
 async function loadRequestState(){
   if(!salesmanSessionToken){
+    invoiceStates={};
     lockedInvoices={};
     buildGroups();
     return;
@@ -640,22 +728,22 @@ async function loadRequestState(){
       sessionToken:salesmanSessionToken,
       _ts:Date.now()
     });
-    lockedInvoices=d.lockedInvoices||{};
 
-    // Drop selections that no longer exist after a successful request.
-    const available=new Set(
-      allInvoices
-        .filter(inv=>{
-          if(!isInvoiceCash(inv))return false;
-          const persistentStatus=String(inv.dailyCashRequestStatus||inv["Daily Cash Request Status"]||"").trim().toLowerCase();
-          if(["processing","pending","approved","deposited"].includes(persistentStatus))return false;
-          return !lockedInvoices[String(inv.invoiceId||"").trim()];
-        })
-        .map(groupKey)
-    );
-    [...selectedGroups].forEach(k=>{if(!available.has(k))selectedGroups.delete(k)});
+    invoiceStates=d.invoiceStates||d.lockedInvoices||{};
+    lockedInvoices=invoiceStates;
 
+    // Keep every Cash invoice visible. Only remove checkbox selections
+    // when a group has no available invoice left.
     buildGroups();
+
+    const availableKeys=new Set(
+      groups.filter(g=>groupAvailableInvoices(g).length>0).map(g=>g.key)
+    );
+    [...selectedGroups].forEach(k=>{
+      if(!availableKeys.has(k))selectedGroups.delete(k);
+    });
+
+    renderGroups();
   }catch(e){
     console.warn("Daily Cash request state:",e);
   }
@@ -724,32 +812,38 @@ function openSingleRequest(key){
   requireSalesman(()=>{
     const g=groups.find(x=>x.key===key);
     if(!g)return;
+    if(!groupAvailableInvoices(g).length)return alert("This Daily Cash group has no invoice available to request.");
     openCashRequest([g]);
   });
 }
 
 function openBatchRequest(){
   requireSalesman(()=>{
-    const picked=selectedGroupObjects();
-    if(picked.length<2)return alert("Please select at least 2 Daily Cash groups for Batch Request.");
+    const picked=selectedGroupObjects().filter(g=>groupAvailableInvoices(g).length>0);
+    if(picked.length<2)return alert("Please select at least 2 Daily Cash groups with available invoices for Batch Request.");
     openCashRequest(picked);
   });
 }
 
 function openCashRequest(picked){
-  requestGroups=picked.slice();
-  const invoices=requestGroups.reduce((a,g)=>a.concat(g.invoices||[]),[]);
-  const cashUSD=requestGroups.reduce((s,g)=>s+g.cashUSD,0);
-  const cashKHR=requestGroups.reduce((s,g)=>s+g.cashKHR,0);
+  requestGroups=picked
+    .map(g=>({...g,invoices:groupAvailableInvoices(g)}))
+    .filter(g=>g.invoices.length>0);
+
+  const invoices=requestGroups.flatMap(g=>g.invoices||[]);
+  const cashUSD=invoices.filter(x=>String(x.currency||"USD").toUpperCase()==="USD").reduce((s,x)=>s+num(x.amountPaid),0);
+  const cashKHR=invoices.filter(x=>String(x.currency||"USD").toUpperCase()==="KHR").reduce((s,x)=>s+num(x.amountPaid),0);
+
+  if(!invoices.length)return alert("No new Cash invoice is available to request.");
 
   $("cashRequestTitle").textContent=requestGroups.length===1?"Daily Cash Request":"Batch Daily Cash Request";
   $("cashRequestInfo").textContent=
-    `${requestGroups.length} group${requestGroups.length===1?"":"s"} · ${invoices.length} Cash invoice${invoices.length===1?"":"s"} · USD ${usd(cashUSD)} · KHR ${khr(cashKHR)}`;
+    `${requestGroups.length} group${requestGroups.length===1?"":"s"} · ${invoices.length} available Cash invoice${invoices.length===1?"":"s"} · USD ${usd(cashUSD)} · KHR ${khr(cashKHR)}`;
 
   $("cashRequestList").innerHTML=requestGroups.map(g=>`
     <div class="selected-item">
-      <span><strong>${esc(g.saleDate)} · ${esc(g.locationName)}</strong><br>${esc(g.salesman)} · ${g.invoiceCount} invoice${g.invoiceCount===1?"":"s"}</span>
-      <span style="text-align:right"><strong>${usd(g.cashUSD)}</strong><br>${khr(g.cashKHR)}</span>
+      <span><strong>${esc(g.saleDate)} · ${esc(g.locationName)}</strong><br>${esc(g.salesman)} · ${g.invoices.length} available invoice${g.invoices.length===1?"":"s"}</span>
+      <span style="text-align:right"><strong>${usd(g.invoices.filter(x=>String(x.currency||"").toUpperCase()==="USD").reduce((s,x)=>s+num(x.amountPaid),0))}</strong><br>${khr(g.invoices.filter(x=>String(x.currency||"").toUpperCase()==="KHR").reduce((s,x)=>s+num(x.amountPaid),0))}</span>
     </div>
   `).join("");
 
@@ -794,7 +888,7 @@ async function sendCashRequest(){
   }
 
   if($("cashBankStatus").value==="yes" && !$("cashBankReference").value.trim()){
-    $("cashRequestError").textContent="Fresh Transaction ID is required when already deposited.";
+    $("cashRequestError").textContent="Bank Transaction ID is required when already deposited.";
     $("cashRequestError").classList.add("show");
     return;
   }
@@ -812,6 +906,7 @@ async function sendCashRequest(){
         invoiceIds,
         alreadyDepositedBank:$("cashBankStatus").value==="yes",
         bankAccount:$("cashBankAccount").value.trim(),
+        transactionId:$("cashBankReference").value.trim(),
         bankReference:$("cashBankReference").value.trim(),
         note:$("cashRequestNote").value.trim()
       })
@@ -832,6 +927,89 @@ async function sendCashRequest(){
     $("cashRequestError").classList.add("show");
   }finally{
     btn.disabled=false;btn.textContent="✓ Send Request to Admin";
+  }
+}
+
+
+function visibleCashInvoices(){
+  return filteredGroups
+    .flatMap(g=>g.invoices.map(inv=>({...inv,locationName:g.locationName,saleDate:g.saleDate})))
+    .sort((a,b)=>String(b.saleDate||"").localeCompare(String(a.saleDate||"")) || String(b.invoiceNo||"").localeCompare(String(a.invoiceNo||"")));
+}
+
+function openDailyCashSummary(){
+  const rows=visibleCashInvoices();
+  const usdTotal=rows.filter(x=>String(x.currency||"USD").toUpperCase()==="USD").reduce((s,x)=>s+num(x.amountPaid),0);
+  const khrTotal=rows.filter(x=>String(x.currency||"USD").toUpperCase()==="KHR").reduce((s,x)=>s+num(x.amountPaid),0);
+
+  $("dailyCashSummarySubtitle").textContent=
+    `${rows.length} Cash invoice${rows.length===1?"":"s"} in your current filter`;
+
+  $("dailyCashSummaryMeta").innerHTML=`
+    <div class="meta-box"><small>Cash Invoices</small><strong>${rows.length}</strong></div>
+    <div class="meta-box"><small>Cash USD</small><strong>${usd(usdTotal)}</strong></div>
+    <div class="meta-box"><small>Cash KHR</small><strong>${khr(khrTotal)}</strong></div>
+    <div class="meta-box"><small>Pending Requests</small><strong>${rows.filter(x=>invoiceRequestStatus(x)==="Pending").length}</strong></div>
+  `;
+
+  $("dailyCashSummaryBody").innerHTML=rows.length?rows.map(inv=>{
+    const c=String(inv.currency||"USD").toUpperCase();
+    const st=invoiceRequestStatus(inv);
+    return `<tr>
+      <td>${esc(inv.saleDate||String(inv.invoiceDate||"").slice(0,10))}</td>
+      <td><strong>${esc(inv.invoiceNo)}</strong></td>
+      <td>${esc(inv.customer||"-")}</td>
+      <td>${esc(inv.salesperson||"-")}</td>
+      <td>${esc(inv.locationName||inv.locationCode||"-")}</td>
+      <td>${esc(c)}</td>
+      <td class="money">${c==="KHR"?khr(inv.amountPaid):usd(inv.amountPaid)}</td>
+      <td><span class="status-pill ${statusClass(st)}">${esc(st)}</span></td>
+      <td><button class="btn primary" onclick='showDailyCashInvoiceDetail(${JSON.stringify(inv.invoiceNo)})'>View Invoice</button></td>
+    </tr>`;
+  }).join(""):'<tr><td colspan="9" class="empty">No Cash invoice in the current filter.</td></tr>';
+
+  $("dailyCashInvoiceDetailPanel").classList.add("hidden");
+  $("dailyCashSummaryOverlay").classList.remove("hidden");
+}
+
+function closeDailyCashSummary(){
+  $("dailyCashSummaryOverlay").classList.add("hidden");
+  $("dailyCashInvoiceDetailPanel").classList.add("hidden");
+}
+
+async function showDailyCashInvoiceDetail(invoiceNo){
+  const panel=$("dailyCashInvoiceDetailPanel");
+  panel.classList.remove("hidden");
+  $("dailyCashInvoiceDetailTitle").textContent=`Invoice ${invoiceNo}`;
+  $("dailyCashInvoiceDetailContent").innerHTML='<div class="empty">Loading invoice detail…</div>';
+
+  try{
+    const inv=await getCashInvoiceDetail(invoiceNo);
+    if(!inv)throw new Error("Invoice was not found.");
+
+    const c=String(inv.currency||"USD").toUpperCase();
+    $("dailyCashInvoiceDetailContent").innerHTML=`
+      <div class="preview-meta">
+        <div class="meta-box"><small>Customer</small><strong>${esc(inv.customer||"-")}</strong></div>
+        <div class="meta-box"><small>Salesman</small><strong>${esc(inv.salesperson||"-")}</strong></div>
+        <div class="meta-box"><small>Location</small><strong>${esc(inv.locationCode||"-")}</strong></div>
+        <div class="meta-box"><small>Cash Amount</small><strong>${c==="KHR"?khr(inv.amountPaid):usd(inv.amountPaid)}</strong></div>
+      </div>
+      <div class="tablewrap">
+        <table class="preview-table">
+          <thead><tr><th>Product</th><th>Unit</th><th class="money">Qty</th><th class="money">Unit Price</th><th class="money">Total</th></tr></thead>
+          <tbody>${(inv.items||[]).map(x=>`
+            <tr>
+              <td><strong>${esc(x.productName||x.productCode||"-")}</strong></td>
+              <td>${esc(x.unit||"-")}</td>
+              <td class="money">${num(x.qty)}</td>
+              <td class="money">${c==="KHR"?khr(x.price):usd(x.price)}</td>
+              <td class="money">${c==="KHR"?khr(x.total):usd(x.total)}</td>
+            </tr>`).join("") || '<tr><td colspan="5" class="empty">No product detail.</td></tr>'}</tbody>
+        </table>
+      </div>`;
+  }catch(e){
+    $("dailyCashInvoiceDetailContent").innerHTML=`<div class="statusbar show">${esc(e.message||"Could not load invoice detail.")}</div>`;
   }
 }
 
@@ -956,7 +1134,28 @@ function startSmartSync(){
   syncTimer=setInterval(()=>smartSync(false),SYNC_INTERVAL_MS);
 }
 
-function openPreview(key){
+async function getCashInvoiceDetail(invoiceNo){
+  const key=String(invoiceNo||"").trim();
+  if(!key)return null;
+  if(invoiceDetailCache[key])return invoiceDetailCache[key];
+
+  const d=await api({action:"invoiceDetail",invoiceNo:key,_ts:Date.now()});
+  const inv=d?.invoice||null;
+  if(inv)invoiceDetailCache[key]=inv;
+  return inv;
+}
+
+function productSummaryHtml(items){
+  if(!Array.isArray(items)||!items.length)return '<span style="color:var(--muted)">No product detail</span>';
+  return items.map(x=>{
+    const name=esc(x.productName||x.productCode||"Product");
+    const qty=num(x.qty);
+    const unit=esc(x.unit||"");
+    return `<span class="product-chip">${name} × ${qty}${unit?" "+unit:""}</span>`;
+  }).join("");
+}
+
+async function openPreview(key){
   currentGroup=groups.find(g=>g.key===key);
   if(!currentGroup) return;
 
@@ -966,72 +1165,52 @@ function openPreview(key){
     `${g.saleDate} • ${g.salesman} • ${g.locationName}`;
 
   $("previewMeta").innerHTML=`
-    <div class="meta-box">
-      <small>Collection Date</small>
-      <strong>${esc(g.saleDate)}</strong>
-    </div>
-    <div class="meta-box">
-      <small>Salesman</small>
-      <strong>${esc(g.salesman)}</strong>
-    </div>
-    <div class="meta-box">
-      <small>Location Name</small>
-      <strong>${esc(g.locationName)}</strong>
-    </div>
-    <div class="meta-box">
-      <small>Paid Invoices</small>
-      <strong>${g.invoiceCount}</strong>
-    </div>
+    <div class="meta-box"><small>Collection Date</small><strong>${esc(g.saleDate)}</strong></div>
+    <div class="meta-box"><small>Salesman</small><strong>${esc(g.salesman)}</strong></div>
+    <div class="meta-box"><small>Location Name</small><strong>${esc(g.locationName)}</strong></div>
+    <div class="meta-box"><small>Cash Invoices</small><strong>${g.invoiceCount}</strong></div>
   `;
 
   $("previewBody").innerHTML=g.invoices.map(inv=>{
     const c=String(inv.currency||"USD").toUpperCase();
+    const reqStatus=invoiceRequestStatus(inv);
 
-    return `<tr>
+    return `<tr data-invoice-no="${esc(inv.invoiceNo)}">
       <td><strong>${esc(inv.invoiceNo)}</strong></td>
       <td>${esc(inv.customer)}</td>
+      <td class="products-cell" id="products-${String(inv.invoiceId||inv.invoiceNo).replace(/[^a-zA-Z0-9_-]/g,"_")}"><span style="color:var(--muted)">Loading products…</span></td>
       <td>${esc(inv.paymentMethod||"-")}</td>
       <td>${esc(c)}</td>
-      <td class="money">
-        ${c==="KHR"
-          ? (num(inv.exchangeRate)>0?rate(inv.exchangeRate):'<span class="warn">Missing</span>')
-          : "-"}
-      </td>
+      <td class="money">${c==="KHR"?(num(inv.exchangeRate)>0?rate(inv.exchangeRate):'<span class="warn">Missing</span>'):"-"}</td>
       <td class="money">${c==="KHR"?khr(inv.amountPaid):usd(inv.amountPaid)}</td>
-      <td>${esc(inv.status||inv.invoiceType||"-")}</td>
+      <td><span class="status-pill ${statusClass(reqStatus)}">${esc(reqStatus)}</span></td>
     </tr>`;
   }).join("");
 
-  const converted=g.dailyCashUSD==null
-    ? null
-    : (g.cashKHR ? g.cashKHR/g.avgRate : 0);
+  const converted=g.dailyCashUSD==null?null:(g.cashKHR ? g.cashKHR/g.avgRate : 0);
 
   $("previewTotals").innerHTML=`
-    <div class="total-row">
-      <span>Cash Collected USD</span>
-      <strong>${usd(g.cashUSD)}</strong>
-    </div>
-    <div class="total-row">
-      <span>Cash Collected KHR</span>
-      <strong>${khr(g.cashKHR)}</strong>
-    </div>
-    <div class="total-row">
-      <span>Average KHR Exchange Rate</span>
-      <strong class="${g.rateComplete?"":"warn"}">
-        ${g.cashKHR?(g.rateComplete?rate(g.avgRate):"Missing Exchange Rate"):"-"}
-      </strong>
-    </div>
-    <div class="total-row">
-      <span>KHR Converted to USD</span>
-      <strong>${converted==null?"—":usd(converted)}</strong>
-    </div>
-    <div class="total-row key">
-      <span>Cash Collection in USD</span>
-      <strong>${g.dailyCashUSD==null?"—":usd(g.dailyCashUSD)}</strong>
-    </div>
+    <div class="total-row"><span>Cash Collected USD</span><strong>${usd(g.cashUSD)}</strong></div>
+    <div class="total-row"><span>Cash Collected KHR</span><strong>${khr(g.cashKHR)}</strong></div>
+    <div class="total-row"><span>Average KHR Exchange Rate</span><strong class="${g.rateComplete?"":"warn"}">${g.cashKHR?(g.rateComplete?rate(g.avgRate):"Missing Exchange Rate"):"-"}</strong></div>
+    <div class="total-row"><span>KHR Converted to USD</span><strong>${converted==null?"—":usd(converted)}</strong></div>
+    <div class="total-row key"><span>Cash Collection in USD</span><strong>${g.dailyCashUSD==null?"—":usd(g.dailyCashUSD)}</strong></div>
   `;
 
   $("previewOverlay").classList.remove("hidden");
+
+  // Load product detail without blocking the preview window.
+  await Promise.allSettled(g.invoices.map(async inv=>{
+    const id="products-"+String(inv.invoiceId||inv.invoiceNo).replace(/[^a-zA-Z0-9_-]/g,"_");
+    const cell=$(id);
+    if(!cell)return;
+    try{
+      const detail=await getCashInvoiceDetail(inv.invoiceNo);
+      cell.innerHTML=productSummaryHtml(detail?.items||[]);
+    }catch(_){
+      cell.innerHTML='<span class="warn">Could not load products</span>';
+    }
+  }));
 }
 
 function closePreview(){
