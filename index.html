@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIG BROTHER — Daily Cash Summary V1.4 Clean Deposit Workflow</title>
+<title>BIG BROTHER — Daily Cash Summary V1.5 Snapshot Status Fix</title>
 <style>
 :root{
   --bg:#f4f7fb;--card:#fff;--line:#dfe6ef;--text:#17304f;--muted:#6d7d91;
@@ -406,17 +406,23 @@ function toggleSelectAll(checked){
 }
 
 async function loadPendingDepositState(){
-  if(!depositSessionToken){pendingDepositGroups={};return}
+  if(!depositSessionToken){
+    pendingDepositGroups={};
+    depositGroupStatus={};
+    return;
+  }
+
   try{
-    const d=await api({
-      action:"dcwfMyStatus",
+    const d=await apiPost({
+      action:"dcwfSnapshotSalesman",
       sessionToken:depositSessionToken,
       _ts:Date.now()
     });
+
     pendingDepositGroups=d.pendingGroupKeys||{};
     depositGroupStatus=d.groupStatus||{};
   }catch(e){
-    console.warn("Pending deposit state:",e);
+    console.warn("Daily Cash request status:",e);
   }
 }
 
