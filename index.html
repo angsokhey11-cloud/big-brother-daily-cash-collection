@@ -163,7 +163,7 @@ tbody tr:hover{background:#f9fbfe}
     </div>
 
     <div class="note">
-      Source: Invoice History. Each Payment Method = Cash invoice is shown on its own row. USD invoices stay in Cash USD and KHR invoices stay in Cash KHR.
+      Source: Invoice History. Each Payment Method = Cash invoice is shown on its own row. Fully Deposited invoices are hidden after Admin approval.
     </div>
   </div>
 </div>
@@ -505,7 +505,13 @@ function buildGroups(){
   groups=allInvoices
     .filter(isInvoiceCash)
     .map(inv=>calculateGroup([inv]))
-    .filter(g=>g.invoiceCount>0)
+    .filter(g=>{
+      if(g.invoiceCount<=0)return false;
+      const inv=g.invoices?.[0];
+      const status=invoiceRequestStatus(inv);
+      // After Admin approval is fully deposited, remove it from Daily Cash Collection.
+      return status!=="Deposited";
+    })
     .sort((a,b)=>
       b.saleDate.localeCompare(a.saleDate) ||
       String(b.invoices?.[0]?.invoiceNo||"").localeCompare(String(a.invoices?.[0]?.invoiceNo||""))
