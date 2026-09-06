@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIG BROTHER — Daily Cash Summary V1</title>
+<title>BIG BROTHER — Daily Cash Summary V1.1 Location Name</title>
 <style>
 :root{
   --bg:#f4f7fb;--card:#fff;--line:#dfe6ef;--text:#17304f;--muted:#6d7d91;
@@ -69,7 +69,7 @@ tbody tr:hover{background:#f9fbfe}
   <div class="topbar">
     <div>
       <h1>Daily Cash Summary</h1>
-      <p class="subtitle">Cash collected directly from sales invoices, grouped by Sale Date + Salesman + Location Code. Credit is excluded.</p>
+      <p class="subtitle">Cash collected directly from sales invoices, grouped by Sale Date + Salesman + Location Name. Credit is excluded.</p>
     </div>
     <span class="pill">Sales Invoice Cash Only</span>
   </div>
@@ -99,7 +99,7 @@ tbody tr:hover{background:#f9fbfe}
           <tr>
             <th>Collection Date</th>
             <th>Salesman</th>
-            <th>Location Code</th>
+            <th>Location Name</th>
             <th class="center">Paid Invoices</th>
             <th class="money">Cash USD</th>
             <th class="money">Cash KHR</th>
@@ -160,6 +160,7 @@ tbody tr:hover{background:#f9fbfe}
 
 <script>
 const SALES_API="https://script.google.com/macros/s/AKfycbyM5mUlz5SeMZ_oPJCo2FgLkPEcodAQ7wPl5wxAdrvfqLvsZLaHxiOtS02L1Q3ZRA3D/exec";
+const MASTER_API="https://script.google.com/macros/s/AKfycbzIjs-cNehMxWTZs3ZPAosseGUu1nqACTPo3S4-onLLEYnEgqP6AUK7p3jwb6MaFr7H0w/exec";
 
 const CACHE_KEY="BB_DAILY_CASH_SUMMARY_CACHE_V1";
 const SYNC_INTERVAL_MS=20000;
@@ -171,6 +172,7 @@ let groups=[];
 let filteredGroups=[];
 let currentGroup=null;
 let lastRevision="";
+let locationMap={};
 let syncBusy=false;
 let syncTimer=null;
 
@@ -246,6 +248,39 @@ async function api(params){
   return d;
 }
 
+
+function locationNameFromCode(code){
+  const key=String(code||"").trim().toLowerCase();
+  return locationMap[key] || String(code||"").trim() || "-";
+}
+
+async function loadLocationMap(){
+  try{
+    const d=await fetch(
+      MASTER_API+"?"+new URLSearchParams({action:"getLocations"}).toString(),
+      {cache:"no-store"}
+    ).then(r=>{
+      if(!r.ok) throw new Error("Master Database returned HTTP "+r.status);
+      return r.json();
+    });
+
+    const rows=Array.isArray(d)?d:(Array.isArray(d?.data)?d.data:(Array.isArray(d?.locations)?d.locations:[]));
+    const map={};
+
+    rows.forEach(row=>{
+      const code=String(row?.locationCode||row?.code||"").trim();
+      const name=String(row?.locationName||row?.name||code).trim();
+      if(code) map[code.toLowerCase()]=name||code;
+    });
+
+    locationMap=map;
+    return map;
+  }catch(error){
+    console.warn("Could not load Location Names:",error);
+    return locationMap;
+  }
+}
+
 function groupKey(inv){
   return [
     dateOnly(inv.invoiceDate),
@@ -317,6 +352,7 @@ function calculateGroup(list){
     saleDate:dateOnly(first.invoiceDate),
     salesman:String(first.salesperson||"").trim()||"-",
     locationCode:String(first.locationCode||"").trim()||"-",
+    locationName:locationNameFromCode(first.locationCode),
     invoiceCount:paidInvoices.length,
     cashUSD,
     cashKHR,
@@ -344,7 +380,7 @@ function buildGroups(){
     .sort((a,b)=>
       b.saleDate.localeCompare(a.saleDate) ||
       a.salesman.localeCompare(b.salesman) ||
-      a.locationCode.localeCompare(b.locationCode)
+      a.locationName.localeCompare(b.locationName)
     );
 
   populateFilters();
@@ -357,7 +393,7 @@ function populateFilters(){
   )].sort();
 
   const locs=[...new Set(
-    groups.map(g=>g.locationCode).filter(v=>v&&v!=="-")
+    groups.map(g=>g.locationName).filter(v=>v&&v!=="-")
   )].sort();
 
   const s=$("salesmanFilter");
@@ -385,7 +421,7 @@ function applyFilters(){
     (!f||g.saleDate>=f) &&
     (!t||g.saleDate<=t) &&
     (!s||g.salesman===s) &&
-    (!l||g.locationCode===l)
+    (!l||g.locationName===l)
   );
 
   renderGroups();
@@ -418,7 +454,7 @@ function renderGroups(){
     <tr>
       <td><strong>${esc(g.saleDate)}</strong></td>
       <td>${esc(g.salesman)}</td>
-      <td><strong>${esc(g.locationCode)}</strong></td>
+      <td><strong>${esc(g.locationName)}</strong></td>
       <td class="center">${g.invoiceCount}</td>
       <td class="money">${usd(g.cashUSD)}</td>
       <td class="money">${khr(g.cashKHR)}</td>
@@ -462,7 +498,8 @@ function saveCache(){
     localStorage.setItem(CACHE_KEY,JSON.stringify({
       revision:String(lastRevision||""),
       savedAt:Date.now(),
-      invoices:allInvoices
+      invoices:allInvoices,
+      locationMap:locationMap
     }));
   }catch(_){}
 }
@@ -473,6 +510,7 @@ function showCache(){
 
   lastRevision=String(c.revision||"");
   allInvoices=c.invoices;
+  if(c.locationMap && typeof c.locationMap==="object") locationMap=c.locationMap;
   buildGroups();
   $("syncStatus").textContent="Cached • checking for updates...";
   return true;
@@ -499,7 +537,8 @@ async function loadInvoices(manual=false,silent=false){
   try{
     const [d,revision]=await Promise.all([
       api({action:"invoiceList"}),
-      getRevision().catch(()=>lastRevision||"")
+      getRevision().catch(()=>lastRevision||""),
+      loadLocationMap()
     ]);
 
     allInvoices=Array.isArray(d.invoices)?d.invoices:[];
@@ -516,6 +555,7 @@ async function loadInvoices(manual=false,silent=false){
     if(c){
       allInvoices=c.invoices;
       lastRevision=String(c.revision||lastRevision||"");
+      if(c.locationMap && typeof c.locationMap==="object") locationMap=c.locationMap;
       buildGroups();
       $("syncStatus").textContent="Cached data • sync will retry";
     }else{
@@ -568,7 +608,7 @@ function openPreview(key){
   const g=currentGroup;
 
   $("previewSubtitle").textContent=
-    `${g.saleDate} • ${g.salesman} • ${g.locationCode}`;
+    `${g.saleDate} • ${g.salesman} • ${g.locationName}`;
 
   $("previewMeta").innerHTML=`
     <div class="meta-box">
@@ -580,8 +620,8 @@ function openPreview(key){
       <strong>${esc(g.salesman)}</strong>
     </div>
     <div class="meta-box">
-      <small>Location Code</small>
-      <strong>${esc(g.locationCode)}</strong>
+      <small>Location Name</small>
+      <strong>${esc(g.locationName)}</strong>
     </div>
     <div class="meta-box">
       <small>Paid Invoices</small>
@@ -648,6 +688,8 @@ function closePreview(){
   const cached=showCache();
 
   if(cached){
+    await loadLocationMap();
+    buildGroups();
     await smartSync(true);
   }else{
     await loadInvoices(false,false);
