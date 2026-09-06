@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIG BROTHER — Daily Cash Summary V1.3 Approval Status Filter</title>
+<title>BIG BROTHER — Daily Cash Summary V1.4 Clean Deposit Workflow</title>
 <style>
 :root{
   --bg:#f4f7fb;--card:#fff;--line:#dfe6ef;--text:#17304f;--muted:#6d7d91;
@@ -349,7 +349,7 @@ function dailyCashApprovalStatus(g){
   const item=depositGroupStatus[groupDepositKey(g)];
   if(!item)return "Not Yet Approved";
   const s=String(item.status||"").trim().toLowerCase();
-  if(s==="approved")return "Approved";
+  if(s==="approved"||s==="deposited")return "Approved";
   if(s==="processing"||s==="pending")return "Processing";
   if(s==="rejected")return "Rejected";
   return "Not Yet Approved";
@@ -409,7 +409,7 @@ async function loadPendingDepositState(){
   if(!depositSessionToken){pendingDepositGroups={};return}
   try{
     const d=await api({
-      action:"myDailyCashDepositRequests",
+      action:"dcwfMyStatus",
       sessionToken:depositSessionToken,
       _ts:Date.now()
     });
@@ -567,15 +567,16 @@ async function sendDepositRequest(){
     };
 
     const d=await apiPost({
-      action:requestGroups.length===1?"dailyCashDepositRequest":"dailyCashDepositBatchRequest",
+      action:"dcwfCreateRequest",
       requestData:JSON.stringify(payload)
     });
 
+    const sentCount=requestGroups.length;
     closeDepositRequest();
     selectedDepositGroups.clear();
     await loadPendingDepositState();
     renderGroups();
-    alert(`${requestGroups.length>1?"Batch Deposit Request":"Deposit Request"} sent to Admin.\nRequest ID: ${d.requestId||""}\nStatus: ${d.status||"Processing"}`);
+    alert(`${sentCount>1?"Batch Deposit Request":"Deposit Request"} sent to Admin.\nRequest ID: ${d.requestId||""}\nStatus: ${d.status||"Processing"}`);
   }catch(e){
     setDepositRequestError(e.message||"Could not send Deposit Request.");
   }finally{
