@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIG BROTHER — Daily Cash Collection V1</title>
+<title>BIG BROTHER — Daily Cash Collection V2 Request Batch</title>
 <style>
 :root{
   --bg:#f4f7fb;--card:#fff;--line:#dfe6ef;--text:#17304f;--muted:#6d7d91;
@@ -56,6 +56,21 @@ tbody tr:hover{background:#f9fbfe}
 .meta-box strong{font-size:15px}
 .preview-table{min-width:920px}
 .preview-table td,.preview-table th{font-size:12px}
+.select-box{width:18px;height:18px;cursor:pointer}
+.requestbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 14px;margin:0 0 14px;background:#f7faff;border:1px solid var(--line);border-radius:12px}
+.requestbar .sum{display:flex;gap:16px;flex-wrap:wrap;flex:1}
+.requestbar .sum span{font-size:12px;color:var(--muted)}
+.requestbar .sum strong{display:block;color:var(--text);font-size:15px;margin-top:2px}
+.btn.request{background:#1f8f5f;color:#fff}
+.btn.request:disabled{opacity:.45;cursor:not-allowed}
+.loginbox,.requestbox{width:min(560px,96vw);background:#fff;border-radius:16px;padding:22px;box-shadow:0 25px 70px rgba(0,0,0,.25)}
+.field{margin-top:12px}.field label{display:block;font-weight:700;font-size:12px;margin-bottom:6px}
+.field input,.field textarea{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;font:inherit}
+.formerror{display:none;color:#c93c46;background:#fff0f1;border:1px solid #ffd5d9;padding:8px 10px;border-radius:8px;margin-top:10px}.formerror.show{display:block}
+.selected-list{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:12px}
+.selected-item{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.selected-item:last-child{border-bottom:0}
+.status-pill{display:inline-block;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:800;background:#e9f2ff;color:#1f5fbf}
 .totals{margin-top:16px;margin-left:auto;width:min(560px,100%);border-top:3px solid #2456a6;padding-top:7px}
 .total-row{display:flex;justify-content:space-between;gap:16px;padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:13px}
 .total-row.key{background:#eef5ff;color:#143d78;font-size:15px;font-weight:900}
@@ -93,10 +108,22 @@ tbody tr:hover{background:#f9fbfe}
       <button class="btn primary" id="refreshBtn" onclick="loadInvoices(true,false)">↻ Refresh</button>
     </div>
 
+    <div class="requestbar">
+      <div class="sum">
+        <span>Selected Groups<strong id="selectedGroupsCount">0</strong></span>
+        <span>Selected Invoices<strong id="selectedInvoicesCount">0</strong></span>
+        <span>Cash USD<strong id="selectedCashUSD">$0.00</strong></span>
+        <span>Cash KHR<strong id="selectedCashKHR">៛0</strong></span>
+      </div>
+      <button class="btn secondary" onclick="clearSelection()">Clear Selection</button>
+      <button class="btn request" id="batchRequestBtn" onclick="openBatchRequest()" disabled>Batch Request (0)</button>
+    </div>
+
     <div class="tablewrap">
       <table>
         <thead>
           <tr>
+            <th class="center">Select</th>
             <th>Collection Date</th>
             <th>Salesman</th>
             <th>Location Name</th>
@@ -105,11 +132,12 @@ tbody tr:hover{background:#f9fbfe}
             <th class="money">Cash KHR</th>
             <th class="money">Avg. KHR Rate</th>
             <th class="money">Cash Collection in USD</th>
+            <th>Status</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody id="summaryBody">
-          <tr><td colspan="9" class="empty">Loading Daily Cash Collection...</td></tr>
+          <tr><td colspan="11" class="empty">Loading Daily Cash Collection...</td></tr>
         </tbody>
       </table>
     </div>
@@ -158,6 +186,31 @@ tbody tr:hover{background:#f9fbfe}
   </div>
 </div>
 
+
+<div class="overlay hidden" id="salesmanLoginOverlay">
+  <div class="loginbox">
+    <h2>Salesman Access</h2>
+    <p>Sign in with your Salesman Code to send Daily Cash Collection requests.</p>
+    <div class="field"><label>Salesman Code</label><input id="salesmanCode" autocomplete="off" placeholder="Enter Salesman Code"></div>
+    <div class="field"><label>PIN</label><input id="salesmanPin" type="password" placeholder="Enter PIN"></div>
+    <div class="formerror" id="salesmanLoginError"></div>
+    <button class="btn request" id="salesmanLoginBtn" style="width:100%;margin-top:12px" onclick="salesmanLogin()">Sign In</button>
+    <button class="btn secondary" style="width:100%;margin-top:8px" onclick="closeSalesmanLogin()">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="cashRequestOverlay">
+  <div class="requestbox">
+    <h2 id="cashRequestTitle">Daily Cash Request</h2>
+    <p id="cashRequestInfo"></p>
+    <div class="selected-list" id="cashRequestList"></div>
+    <div class="field"><label>Note <span style="font-weight:400;color:#7a8798">(optional)</span></label><textarea id="cashRequestNote" rows="2" placeholder="Add note for Admin"></textarea></div>
+    <div class="formerror" id="cashRequestError"></div>
+    <button class="btn request" id="sendCashRequestBtn" style="width:100%;margin-top:12px" onclick="sendCashRequest()">✓ Send Request to Admin</button>
+    <button class="btn secondary" style="width:100%;margin-top:8px" onclick="closeCashRequest()">Cancel</button>
+  </div>
+</div>
+
 <script>
 const SALES_API="https://script.google.com/macros/s/AKfycbyM5mUlz5SeMZ_oPJCo2FgLkPEcodAQ7wPl5wxAdrvfqLvsZLaHxiOtS02L1Q3ZRA3D/exec";
 const MASTER_API="https://script.google.com/macros/s/AKfycbzIjs-cNehMxWTZs3ZPAosseGUu1nqACTPo3S4-onLLEYnEgqP6AUK7p3jwb6MaFr7H0w/exec";
@@ -168,6 +221,11 @@ const SYNC_INTERVAL_MS=20000;
 const $=id=>document.getElementById(id);
 
 let allInvoices=[];
+let selectedGroups=new Set();
+let lockedInvoices={};
+let requestGroups=[];
+let salesmanSessionToken=sessionStorage.getItem("bb_ar_salesman_session")||"";
+let pendingAction=null;
 let groups=[];
 let filteredGroups=[];
 let currentGroup=null;
@@ -246,6 +304,27 @@ async function api(params){
   }
 
   return d;
+}
+
+
+async function apiPost(params){
+  const body=new URLSearchParams();
+  Object.entries(params||{}).forEach(([k,v])=>body.append(k,v==null?"":String(v)));
+
+  const res=await fetch(SALES_API,{
+    method:"POST",
+    headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+    body,
+    redirect:"follow"
+  });
+
+  const text=await res.text();
+  let data;
+  try{data=JSON.parse(text)}
+  catch(_){throw new Error("Server returned an unreadable response.");}
+
+  if(data?.success===false)throw new Error(data.error||"Database error.");
+  return data;
 }
 
 
@@ -372,7 +451,7 @@ function calculateGroup(list){
 function buildGroups(){
   const map=new Map();
 
-  allInvoices.filter(isInvoiceCash).forEach(inv=>{
+  allInvoices.filter(inv=>isInvoiceCash(inv)&&!lockedInvoices[String(inv.invoiceId||'').trim()]).forEach(inv=>{
     const key=groupKey(inv);
     if(!map.has(key)) map.set(key,[]);
     map.get(key).push(inv);
@@ -447,15 +526,17 @@ function renderGroups(){
   $("cardUsd").textContent=usd(totalUsd);
   $("cardKhr").textContent=khr(totalKhr);
   $("cardDailyUsd").textContent=allComplete?usd(dailyUsd):"Rate Missing";
+  updateSelectedSummary();
 
   if(!filteredGroups.length){
     $("summaryBody").innerHTML=
-      '<tr><td colspan="9" class="empty">No Daily Cash groups found.</td></tr>';
+      '<tr><td colspan="11" class="empty">No Daily Cash groups found.</td></tr>';
     return;
   }
 
   $("summaryBody").innerHTML=filteredGroups.map(g=>`
     <tr>
+      <td class="center"><input class="select-box" type="checkbox" ${selectedGroups.has(g.key)?"checked":""} onchange='toggleGroupSelection(${JSON.stringify(g.key)},this.checked)'></td>
       <td><strong>${esc(g.saleDate)}</strong></td>
       <td>${esc(g.salesman)}</td>
       <td><strong>${esc(g.locationName)}</strong></td>
@@ -468,10 +549,10 @@ function renderGroups(){
       <td class="money daily-key">
         ${g.dailyCashUSD==null?"—":usd(g.dailyCashUSD)}
       </td>
+      <td><span class="status-pill">Not Requested</span></td>
       <td>
-        <button class="btn primary" onclick='openPreview(${JSON.stringify(g.key)})'>
-          Preview
-        </button>
+        <button class="btn primary" onclick='openPreview(${JSON.stringify(g.key)})'>Preview</button>
+        <button class="btn request" onclick='openSingleRequest(${JSON.stringify(g.key)})'>Request</button>
       </td>
     </tr>
   `).join("");
@@ -483,6 +564,216 @@ function clearFilters(){
   $("salesmanFilter").value="";
   $("locationFilter").value="";
   applyFilters();
+}
+
+
+function groupInvoiceIds(g){
+  return (g?.invoices||[]).map(x=>String(x.invoiceId||"").trim()).filter(Boolean);
+}
+
+function selectedGroupObjects(){
+  return groups.filter(g=>selectedGroups.has(g.key));
+}
+
+function updateSelectedSummary(){
+  const picked=selectedGroupObjects();
+  const invoiceCount=picked.reduce((s,g)=>s+g.invoiceCount,0);
+  const cashUSD=picked.reduce((s,g)=>s+g.cashUSD,0);
+  const cashKHR=picked.reduce((s,g)=>s+g.cashKHR,0);
+
+  $("selectedGroupsCount").textContent=picked.length;
+  $("selectedInvoicesCount").textContent=invoiceCount;
+  $("selectedCashUSD").textContent=usd(cashUSD);
+  $("selectedCashKHR").textContent=khr(cashKHR);
+
+  const btn=$("batchRequestBtn");
+  btn.disabled=picked.length<2;
+  btn.textContent=`Batch Request (${picked.length})`;
+}
+
+function toggleGroupSelection(key,checked){
+  if(checked)selectedGroups.add(key);
+  else selectedGroups.delete(key);
+  updateSelectedSummary();
+}
+
+function clearSelection(){
+  selectedGroups.clear();
+  renderGroups();
+}
+
+async function loadRequestState(){
+  if(!salesmanSessionToken){
+    lockedInvoices={};
+    buildGroups();
+    return;
+  }
+
+  try{
+    const d=await api({
+      action:"dccMyState",
+      sessionToken:salesmanSessionToken,
+      _ts:Date.now()
+    });
+    lockedInvoices=d.lockedInvoices||{};
+
+    // Drop selections that no longer exist after a successful request.
+    const available=new Set(
+      allInvoices
+        .filter(inv=>isInvoiceCash(inv)&&!lockedInvoices[String(inv.invoiceId||"").trim()])
+        .map(groupKey)
+    );
+    [...selectedGroups].forEach(k=>{if(!available.has(k))selectedGroups.delete(k)});
+
+    buildGroups();
+  }catch(e){
+    console.warn("Daily Cash request state:",e);
+  }
+}
+
+function setSalesmanLoginError(msg){
+  $("salesmanLoginError").textContent=msg||"";
+  $("salesmanLoginError").classList.toggle("show",!!msg);
+}
+
+function openSalesmanLogin(action){
+  pendingAction=action||null;
+  setSalesmanLoginError("");
+  $("salesmanLoginOverlay").classList.remove("hidden");
+  setTimeout(()=>$("salesmanCode").focus(),50);
+}
+
+function closeSalesmanLogin(){
+  $("salesmanLoginOverlay").classList.add("hidden");
+  pendingAction=null;
+}
+
+async function salesmanLogin(){
+  const code=$("salesmanCode").value.trim();
+  const pin=$("salesmanPin").value.trim();
+  if(!code||!pin)return setSalesmanLoginError("Salesman Code and PIN are required.");
+
+  const btn=$("salesmanLoginBtn");
+  btn.disabled=true;btn.textContent="Signing In…";setSalesmanLoginError("");
+
+  try{
+    const d=await apiPost({
+      action:"arLogin",
+      role:"salesman",
+      salesmanCode:code,
+      pin:pin
+    });
+
+    if(!d||!d.authorized||!d.sessionToken)throw new Error(d?.error||"Salesman login failed.");
+
+    salesmanSessionToken=d.sessionToken;
+    sessionStorage.setItem("bb_ar_salesman_session",salesmanSessionToken);
+    $("salesmanLoginOverlay").classList.add("hidden");
+
+    const next=pendingAction;
+    pendingAction=null;
+
+    await loadRequestState();
+    if(typeof next==="function")next();
+  }catch(e){
+    setSalesmanLoginError(e.message||"Salesman login failed.");
+  }finally{
+    btn.disabled=false;btn.textContent="Sign In";
+  }
+}
+
+function requireSalesman(action){
+  if(salesmanSessionToken){
+    action();
+    return;
+  }
+  openSalesmanLogin(action);
+}
+
+function openSingleRequest(key){
+  requireSalesman(()=>{
+    const g=groups.find(x=>x.key===key);
+    if(!g)return;
+    openCashRequest([g]);
+  });
+}
+
+function openBatchRequest(){
+  requireSalesman(()=>{
+    const picked=selectedGroupObjects();
+    if(picked.length<2)return alert("Please select at least 2 Daily Cash groups for Batch Request.");
+    openCashRequest(picked);
+  });
+}
+
+function openCashRequest(picked){
+  requestGroups=picked.slice();
+  const invoices=requestGroups.reduce((a,g)=>a.concat(g.invoices||[]),[]);
+  const cashUSD=requestGroups.reduce((s,g)=>s+g.cashUSD,0);
+  const cashKHR=requestGroups.reduce((s,g)=>s+g.cashKHR,0);
+
+  $("cashRequestTitle").textContent=requestGroups.length===1?"Daily Cash Request":"Batch Daily Cash Request";
+  $("cashRequestInfo").textContent=
+    `${requestGroups.length} group${requestGroups.length===1?"":"s"} · ${invoices.length} Cash invoice${invoices.length===1?"":"s"} · USD ${usd(cashUSD)} · KHR ${khr(cashKHR)}`;
+
+  $("cashRequestList").innerHTML=requestGroups.map(g=>`
+    <div class="selected-item">
+      <span><strong>${esc(g.saleDate)} · ${esc(g.locationName)}</strong><br>${esc(g.salesman)} · ${g.invoiceCount} invoice${g.invoiceCount===1?"":"s"}</span>
+      <span style="text-align:right"><strong>${usd(g.cashUSD)}</strong><br>${khr(g.cashKHR)}</span>
+    </div>
+  `).join("");
+
+  $("cashRequestNote").value="";
+  $("cashRequestError").textContent="";
+  $("cashRequestError").classList.remove("show");
+  $("cashRequestOverlay").classList.remove("hidden");
+}
+
+function closeCashRequest(){
+  $("cashRequestOverlay").classList.add("hidden");
+  requestGroups=[];
+}
+
+async function sendCashRequest(){
+  if(!requestGroups.length||!salesmanSessionToken)return;
+
+  const invoiceIds=[...new Set(
+    requestGroups.flatMap(g=>groupInvoiceIds(g))
+  )];
+
+  if(!invoiceIds.length)return;
+
+  const btn=$("sendCashRequestBtn");
+  btn.disabled=true;btn.textContent="Sending…";
+  $("cashRequestError").textContent="";
+  $("cashRequestError").classList.remove("show");
+
+  try{
+    const d=await apiPost({
+      action:"dccCreateRequest",
+      requestData:JSON.stringify({
+        sessionToken:salesmanSessionToken,
+        invoiceIds,
+        note:$("cashRequestNote").value.trim()
+      })
+    });
+
+    closeCashRequest();
+    selectedGroups.clear();
+    await loadRequestState();
+
+    alert(
+      `${d.groupCount>1?"Batch Request":"Request"} sent successfully.\n`+
+      `Request ID: ${d.requestId}\n`+
+      `Invoices: ${d.invoiceCount}\n`+
+      `Status: ${d.status}`
+    );
+  }catch(e){
+    $("cashRequestError").textContent=e.message||"Could not send Daily Cash Request.";
+    $("cashRequestError").classList.add("show");
+  }finally{
+    btn.disabled=false;btn.textContent="✓ Send Request to Admin";
+  }
 }
 
 function readCache(){
@@ -550,6 +841,7 @@ async function loadInvoices(manual=false,silent=false){
 
     buildGroups();
     saveCache();
+    if(salesmanSessionToken)await loadRequestState();
 
     $("syncStatus").textContent=
       `Updated • ${allInvoices.length} invoices checked`;
@@ -565,7 +857,7 @@ async function loadInvoices(manual=false,silent=false){
     }else{
       showError(e.message||"Could not load sales invoice cash.");
       $("summaryBody").innerHTML=
-        '<tr><td colspan="9" class="empty">Could not load Daily Cash Collection.</td></tr>';
+        '<tr><td colspan="11" class="empty">Could not load Daily Cash Collection.</td></tr>';
       $("syncStatus").textContent="Load failed";
     }
   }finally{
