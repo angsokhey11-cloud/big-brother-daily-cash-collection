@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIG BROTHER — Daily Cash Collection V3.4 No Login</title>
+<title>BIG BROTHER — Daily Cash Collection V4 Cash Close & Vault</title>
 <style>
 :root{
   --bg:#f4f7fb;--card:#fff;--line:#dfe6ef;--text:#17304f;--muted:#6d7d91;
@@ -94,7 +94,7 @@ tbody tr:hover{background:#f9fbfe}
   <div class="topbar">
     <div>
       <h1>Daily Cash Collection</h1>
-      <p class="subtitle">Cash Sale invoices collected directly from Invoice History. Each Cash invoice is shown separately. USD and KHR are kept separately.</p>
+      <p class="subtitle">Cash invoices from Invoice History. Select invoices, count the real USD/KHR collected, and close the batch only when the cash matches.</p>
     </div>
     <span class="pill">Invoice History · Cash Sales Only</span>
   </div>
@@ -130,7 +130,7 @@ tbody tr:hover{background:#f9fbfe}
         <span>Cash KHR<strong id="selectedCashKHR">៛0</strong></span>
       </div>
       <button class="btn secondary" onclick="clearSelection()">Clear Selection</button>
-      <button class="btn request" id="batchRequestBtn" onclick="openBatchRequest()" disabled>Batch Request (0)</button>
+      <button class="btn request" id="batchRequestBtn" onclick="openBatchRequest()" disabled>Close Selected (0)</button>
     </div>
 
     <div class="tablewrap">
@@ -163,7 +163,7 @@ tbody tr:hover{background:#f9fbfe}
     </div>
 
     <div class="note">
-      Source: Invoice History. Each Payment Method = Cash invoice is shown on its own row. Fully Deposited invoices are hidden after Admin approval.
+      Source: Invoice History. Each Payment Method = Cash invoice is shown on its own row. USD invoices stay in Cash USD and KHR invoices stay in Cash KHR.
     </div>
   </div>
 </div>
@@ -191,7 +191,7 @@ tbody tr:hover{background:#f9fbfe}
               <th>Currency</th>
               <th class="money">Exchange Rate</th>
               <th class="money">Cash Collected</th>
-              <th>Request Status</th>
+              <th>Close Status</th>
             </tr>
           </thead>
           <tbody id="previewBody"></tbody>
@@ -205,28 +205,52 @@ tbody tr:hover{background:#f9fbfe}
 
 
 
+
 <div class="overlay hidden" id="cashRequestOverlay">
-  <div class="requestbox">
-    <h2 id="cashRequestTitle">Daily Cash Request</h2>
+  <div class="requestbox" style="width:min(720px,96vw)">
+    <h2 id="cashRequestTitle">Close Daily Cash</h2>
     <p id="cashRequestInfo"></p>
     <div class="selected-list" id="cashRequestList"></div>
+
     <div class="field">
-      <label>Deposit Status</label>
-      <select id="cashBankStatus" onchange="toggleCashBankFields()" style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;font:inherit">
-        <option value="no">Not Yet Deposit — Give Real Cash to Accountant</option>
-        <option value="yes">Already Deposit — Money Already in Company Bank</option>
+      <label>Close Method</label>
+      <select id="closeMethod" onchange="toggleCloseMethod()" style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;font:inherit">
+        <option value="Hand Cash to Accountant">Hand Cash to Accountant → Cash Vault</option>
+        <option value="Deposit to Company Bank">Deposit to Company Bank Myself</option>
       </select>
     </div>
-    <div id="cashBankFields" style="display:none">
-      <div class="field"><label>Bank Account</label><input id="cashBankAccount" placeholder="Example: ABA USD / ACLEDA KHR"></div>
-      <div class="field"><label>Bank Transaction ID</label><input id="cashBankReference" placeholder="Enter fresh unique Bank Transaction ID"></div>
+
+    <div class="preview-meta" style="margin-top:12px">
+      <div class="meta-box"><small>Expected Invoice Value</small><strong id="closeExpectedUSD">$0.00</strong></div>
+      <div class="meta-box"><small>Actual Cash Value</small><strong id="closeActualEquivalent">$0.00</strong></div>
+      <div class="meta-box"><small>Difference</small><strong id="closeDifference">$0.00</strong></div>
+      <div class="meta-box"><small>Result</small><strong id="closeMatchStatus">Enter Cash</strong></div>
     </div>
-    <div class="field"><label>Note <span style="font-weight:400;color:#7a8798">(optional)</span></label><textarea id="cashRequestNote" rows="2" placeholder="Add note for Admin"></textarea></div>
+
+    <div class="field"><label>Actual USD Cash</label><input id="actualCashUSD" type="number" min="0" step="0.01" value="0" oninput="recalculateClose()"></div>
+    <div class="field"><label>Actual KHR Cash</label><input id="actualCashKHR" type="number" min="0" step="100" value="0" oninput="recalculateClose()"></div>
+    <div class="field"><label>Closing Exchange Rate</label><input id="closingRate" type="number" min="0" step="1" placeholder="Example: 4060" oninput="recalculateClose()"></div>
+
+    <div id="selfDepositFields" style="display:none">
+      <div class="field"><label>Company Bank Account</label><input id="closeBankAccount" placeholder="Example: ABA USD"></div>
+      <div class="field"><label>Deposit Exchange Rate</label><input id="depositRate" type="number" min="0" step="1" placeholder="Rate used to exchange KHR to USD" oninput="recalculateClose()"></div>
+      <div class="field"><label>Final Bank Deposit USD</label><input id="bankDepositUSD" type="number" min="0" step="0.01" oninput="recalculateClose()"></div>
+      <div class="field"><label>Bank Transaction ID</label><input id="closeTransactionId" placeholder="Fresh unique Transaction ID"></div>
+
+      <div class="preview-meta" style="margin-top:12px">
+        <div class="meta-box"><small>Expected Bank USD</small><strong id="expectedBankUSD">$0.00</strong></div>
+        <div class="meta-box"><small>Bank Difference</small><strong id="bankDifferenceUSD">$0.00</strong></div>
+      </div>
+    </div>
+
+    <div class="field"><label>Note <span style="font-weight:400;color:#7a8798">(optional)</span></label><textarea id="cashRequestNote" rows="2"></textarea></div>
     <div class="formerror" id="cashRequestError"></div>
-    <button class="btn request" id="sendCashRequestBtn" style="width:100%;margin-top:12px" onclick="sendCashRequest()">✓ Send Request to Admin</button>
+
+    <button class="btn request" id="sendCashRequestBtn" style="width:100%;margin-top:12px" onclick="sendCashRequest()">✓ Send Close to Admin</button>
     <button class="btn secondary" style="width:100%;margin-top:8px" onclick="closeCashRequest()">Cancel</button>
   </div>
 </div>
+
 
 
 <div class="overlay hidden" id="dailyCashSummaryOverlay">
@@ -247,7 +271,7 @@ tbody tr:hover{background:#f9fbfe}
             <tr>
               <th>Date</th><th>Invoice No</th><th>Customer</th><th>Salesman</th>
               <th>Location</th><th>Currency</th><th class="money">Cash Amount</th>
-              <th>Request Status</th><th>Action</th>
+              <th>Close Status</th><th>Action</th>
             </tr>
           </thead>
           <tbody id="dailyCashSummaryBody"></tbody>
@@ -505,13 +529,7 @@ function buildGroups(){
   groups=allInvoices
     .filter(isInvoiceCash)
     .map(inv=>calculateGroup([inv]))
-    .filter(g=>{
-      if(g.invoiceCount<=0)return false;
-      const inv=g.invoices?.[0];
-      const status=invoiceRequestStatus(inv);
-      // After Admin approval is fully deposited, remove it from Daily Cash Collection.
-      return status!=="Deposited";
-    })
+    .filter(g=>g.invoiceCount>0)
     .sort((a,b)=>
       b.saleDate.localeCompare(a.saleDate) ||
       String(b.invoices?.[0]?.invoiceNo||"").localeCompare(String(a.invoices?.[0]?.invoiceNo||""))
@@ -569,7 +587,7 @@ function invoiceRequestState(inv){
 
 function invoiceRequestStatus(inv){
   const s=invoiceRequestState(inv);
-  return s?.status||"Not Requested";
+  return s?.status||"Open";
 }
 
 function invoiceCanRequest(inv){
@@ -590,6 +608,7 @@ function groupRequestStatus(g){
 function statusClass(text){
   const s=String(text||"").toLowerCase();
   if(s==="pending")return "pending";
+  if(s==="in vault")return "pending-deposit";
   if(s==="pending deposit")return "pending-deposit";
   if(s==="deposited")return "deposited";
   if(s==="mixed")return "mixed";
@@ -691,7 +710,7 @@ function updateSelectedSummary(){
 
   const btn=$("batchRequestBtn");
   btn.disabled=picked.length<2;
-  btn.textContent=`Batch Request (${picked.length})`;
+  btn.textContent=`Close Selected (${picked.length})`;
 
   const summaryBtn=$("dailyCashSummaryBtn");
   if(summaryBtn){
@@ -713,59 +732,98 @@ function clearSelection(){
 
 async function loadRequestState(){
   try{
-    const d=await api({
-      action:"dccMyState",
-      sessionToken:salesmanSessionToken||"",
-      _ts:Date.now()
-    });
-
+    const d=await api({action:"dccMyState",_ts:Date.now()});
     invoiceStates=d.invoiceStates||d.lockedInvoices||{};
     lockedInvoices=invoiceStates;
 
-    // Keep every Cash invoice visible. Only remove checkbox selections
-    // when a group has no available invoice left.
     buildGroups();
 
     const availableKeys=new Set(
       groups.filter(g=>groupAvailableInvoices(g).length>0).map(g=>g.key)
     );
+
     [...selectedGroups].forEach(k=>{
       if(!availableKeys.has(k))selectedGroups.delete(k);
     });
 
     renderGroups();
   }catch(e){
-    console.warn("Daily Cash request state:",e);
+    console.warn("Daily Cash close state:",e);
   }
 }
 
-
-
-
-
-
-
-async 
 
 function requireSalesman(action){
   if(typeof action==="function")action();
 }
 
 function openSingleRequest(key){
-  requireSalesman(()=>{
-    const g=groups.find(x=>x.key===key);
-    if(!g)return;
-    if(!groupAvailableInvoices(g).length)return alert("This Cash invoice is not available to request.");
-    openCashRequest([g]);
-  });
+  const g=groups.find(x=>x.key===key);
+  if(!g)return;
+  if(!groupAvailableInvoices(g).length)return alert("This Cash invoice is already closed or pending.");
+  openCashRequest([g]);
 }
 
 function openBatchRequest(){
-  requireSalesman(()=>{
-    const picked=selectedGroupObjects().filter(g=>groupAvailableInvoices(g).length>0);
-    if(picked.length<2)return alert("Please select at least 2 Cash invoices for Batch Request.");
-    openCashRequest(picked);
-  });
+  const picked=selectedGroupObjects().filter(g=>groupAvailableInvoices(g).length>0);
+  if(!picked.length)return alert("Please select Cash invoices first.");
+  openCashRequest(picked);
+}
+
+function selectedCloseInvoices(){
+  return requestGroups.flatMap(g=>g.invoices||[]);
+}
+
+function expectedUsdForInvoice(inv){
+  const c=String(inv.currency||"USD").toUpperCase();
+  const amount=num(inv.amountPaid);
+
+  if(c==="USD")return amount;
+
+  const r=num(inv.exchangeRate);
+  return r>0?amount/r:NaN;
+}
+
+function expectedCloseUSD(){
+  return selectedCloseInvoices().reduce((s,inv)=>{
+    const x=expectedUsdForInvoice(inv);
+    return s+(Number.isFinite(x)?x:0);
+  },0);
+}
+
+function toggleCloseMethod(){
+  const self=$("closeMethod").value==="Deposit to Company Bank";
+  $("selfDepositFields").style.display=self?"":"none";
+  recalculateClose();
+}
+
+function recalculateClose(){
+  const expected=expectedCloseUSD();
+  const usdCash=num($("actualCashUSD").value);
+  const khrCash=num($("actualCashKHR").value);
+  const closeRate=num($("closingRate").value);
+
+  const actual=usdCash+(khrCash>0&&closeRate>0?khrCash/closeRate:0);
+  const diff=actual-expected;
+  const matched=Math.abs(diff)<=0.05 && (khrCash<=0||closeRate>0);
+
+  $("closeExpectedUSD").textContent=usd(expected);
+  $("closeActualEquivalent").textContent=usd(actual);
+  $("closeDifference").textContent=(diff>=0?"+":"-")+usd(Math.abs(diff));
+  $("closeMatchStatus").textContent=matched?"MATCHED ✓":"NOT MATCHED";
+  $("closeMatchStatus").style.color=matched?"#198754":"#c93c46";
+
+  if($("closeMethod").value==="Deposit to Company Bank"){
+    const depRate=num($("depositRate").value);
+    const expectedBank=usdCash+(khrCash>0&&depRate>0?khrCash/depRate:0);
+    const bankUsd=num($("bankDepositUSD").value);
+    const bankDiff=bankUsd-expectedBank;
+
+    $("expectedBankUSD").textContent=usd(expectedBank);
+    $("bankDifferenceUSD").textContent=(bankDiff>=0?"+":"-")+usd(Math.abs(bankDiff));
+  }
+
+  return {expected,actual,diff,matched};
 }
 
 function openCashRequest(picked){
@@ -773,21 +831,25 @@ function openCashRequest(picked){
     .map(g=>({...g,invoices:groupAvailableInvoices(g)}))
     .filter(g=>g.invoices.length>0);
 
-  const invoices=requestGroups.flatMap(g=>g.invoices||[]);
-  const cashUSD=invoices.filter(x=>String(x.currency||"USD").toUpperCase()==="USD").reduce((s,x)=>s+num(x.amountPaid),0);
-  const cashKHR=invoices.filter(x=>String(x.currency||"USD").toUpperCase()==="KHR").reduce((s,x)=>s+num(x.amountPaid),0);
+  const invoices=selectedCloseInvoices();
+  if(!invoices.length)return alert("No Cash invoice is available to close.");
 
-  if(!invoices.length)return alert("No new Cash invoice is available to request.");
+  const missingRate=invoices.some(inv=>
+    String(inv.currency||"USD").toUpperCase()==="KHR" && num(inv.exchangeRate)<=0
+  );
+  if(missingRate)return alert("One or more KHR invoices are missing Exchange Rate.");
 
-  $("cashRequestTitle").textContent=requestGroups.length===1?"Daily Cash Request":"Batch Daily Cash Request";
-  $("cashRequestInfo").textContent=
-    `${invoices.length} Cash invoice${invoices.length===1?"":"s"} selected · USD ${usd(cashUSD)} · KHR ${khr(cashKHR)}`;
+  const salesmen=[...new Set(invoices.map(x=>String(x.salesperson||"").trim()).filter(Boolean))];
+  if(salesmen.length>1)return alert("Please close one Salesman at a time.");
+
+  $("cashRequestTitle").textContent=`Close Daily Cash (${invoices.length} invoice${invoices.length===1?"":"s"})`;
+  $("cashRequestInfo").textContent="Count the real physical USD and KHR. The batch can close only when the cash matches the selected invoice value.";
 
   $("cashRequestList").innerHTML=requestGroups.map(g=>{
     const inv=g.invoices?.[0]||{};
     const c=String(inv.currency||"USD").toUpperCase();
-    return `
-    <div class="selected-item">
+
+    return `<div class="selected-item">
       <span>
         <strong>${esc(inv.invoiceNo||"-")} · ${esc(inv.customer||"-")}</strong><br>
         ${esc(g.saleDate)} · ${esc(g.salesman)} · ${esc(g.locationName)}
@@ -796,24 +858,20 @@ function openCashRequest(picked){
     </div>`;
   }).join("");
 
-  $("cashBankStatus").value="no";
-  $("cashBankFields").style.display="none";
-  $("cashBankAccount").value="";
-  $("cashBankReference").value="";
+  $("closeMethod").value="Hand Cash to Accountant";
+  $("actualCashUSD").value="0";
+  $("actualCashKHR").value="0";
+  $("closingRate").value="";
+  $("closeBankAccount").value="";
+  $("depositRate").value="";
+  $("bankDepositUSD").value="";
+  $("closeTransactionId").value="";
   $("cashRequestNote").value="";
   $("cashRequestError").textContent="";
   $("cashRequestError").classList.remove("show");
+
+  toggleCloseMethod();
   $("cashRequestOverlay").classList.remove("hidden");
-}
-
-
-function toggleCashBankFields(){
-  const yes=$("cashBankStatus").value==="yes";
-  $("cashBankFields").style.display=yes?"":"none";
-  if(!yes){
-    $("cashBankAccount").value="";
-    $("cashBankReference").value="";
-  }
 }
 
 function closeCashRequest(){
@@ -822,28 +880,58 @@ function closeCashRequest(){
 }
 
 async function sendCashRequest(){
-  if(!requestGroups.length)return;
+  const invoices=selectedCloseInvoices();
+  if(!invoices.length)return;
 
-  const invoiceIds=[...new Set(
-    requestGroups.flatMap(g=>groupInvoiceIds(g))
-  )];
+  const calc=recalculateClose();
 
-  if(!invoiceIds.length)return;
-
-  if($("cashBankStatus").value==="yes" && !$("cashBankAccount").value.trim()){
-    $("cashRequestError").textContent="Bank Account is required when already deposited.";
+  if(!calc.matched){
+    $("cashRequestError").textContent="Actual USD + KHR does not match the selected invoice value.";
     $("cashRequestError").classList.add("show");
     return;
   }
 
-  if($("cashBankStatus").value==="yes" && !$("cashBankReference").value.trim()){
-    $("cashRequestError").textContent="Bank Transaction ID is required when already deposited.";
+  const method=$("closeMethod").value;
+  const actualKHR=num($("actualCashKHR").value);
+  const closingRate=num($("closingRate").value);
+
+  if(actualKHR>0&&closingRate<=0){
+    $("cashRequestError").textContent="Closing Exchange Rate is required.";
     $("cashRequestError").classList.add("show");
     return;
   }
+
+  if(method==="Deposit to Company Bank"){
+    const bank=$("closeBankAccount").value.trim();
+    const tx=$("closeTransactionId").value.trim();
+    const depRate=num($("depositRate").value);
+    const bankUsd=num($("bankDepositUSD").value);
+    const expectedBank=num($("actualCashUSD").value)+(actualKHR>0&&depRate>0?actualKHR/depRate:0);
+
+    if(!bank||!tx){
+      $("cashRequestError").textContent="Company Bank Account and Transaction ID are required.";
+      $("cashRequestError").classList.add("show");
+      return;
+    }
+
+    if(actualKHR>0&&depRate<=0){
+      $("cashRequestError").textContent="Deposit Exchange Rate is required.";
+      $("cashRequestError").classList.add("show");
+      return;
+    }
+
+    if(bankUsd<=0||Math.abs(bankUsd-expectedBank)>0.05){
+      $("cashRequestError").textContent="Bank Deposit USD does not match the collected cash at Deposit Exchange Rate.";
+      $("cashRequestError").classList.add("show");
+      return;
+    }
+  }
+
+  const invoiceIds=[...new Set(invoices.map(x=>String(x.invoiceId||"").trim()).filter(Boolean))];
 
   const btn=$("sendCashRequestBtn");
-  btn.disabled=true;btn.textContent="Sending…";
+  btn.disabled=true;
+  btn.textContent="Sending…";
   $("cashRequestError").textContent="";
   $("cashRequestError").classList.remove("show");
 
@@ -851,12 +939,16 @@ async function sendCashRequest(){
     const d=await apiPost({
       action:"dccCreateRequest",
       requestData:JSON.stringify({
-        sessionToken:salesmanSessionToken||"",
         invoiceIds,
-        alreadyDepositedBank:$("cashBankStatus").value==="yes",
-        bankAccount:$("cashBankAccount").value.trim(),
-        transactionId:$("cashBankReference").value.trim(),
-        bankReference:$("cashBankReference").value.trim(),
+        salesperson:invoices[0]?.salesperson||"",
+        closeMethod:method,
+        actualCashUSD:num($("actualCashUSD").value),
+        actualCashKHR,
+        closingRate,
+        bankAccount:$("closeBankAccount").value.trim(),
+        transactionId:$("closeTransactionId").value.trim(),
+        depositRate:num($("depositRate").value),
+        bankDepositUSD:num($("bankDepositUSD").value),
         note:$("cashRequestNote").value.trim()
       })
     });
@@ -866,16 +958,17 @@ async function sendCashRequest(){
     await loadRequestState();
 
     alert(
-      `${d.groupCount>1?"Batch Request":"Request"} sent successfully.\n`+
-      `Request ID: ${d.requestId}\n`+
+      `Daily Cash Close sent successfully.\n`+
+      `Close ID: ${d.closeId}\n`+
       `Invoices: ${d.invoiceCount}\n`+
-      `Status: ${d.status}`
+      `Status: Pending Admin Review`
     );
   }catch(e){
-    $("cashRequestError").textContent=e.message||"Could not send Daily Cash Request.";
+    $("cashRequestError").textContent=e.message||"Could not send Daily Cash Close.";
     $("cashRequestError").classList.add("show");
   }finally{
-    btn.disabled=false;btn.textContent="✓ Send Request to Admin";
+    btn.disabled=false;
+    btn.textContent="✓ Send Close to Admin";
   }
 }
 
@@ -1046,7 +1139,7 @@ async function loadInvoices(manual=false,silent=false){
 
     buildGroups();
     saveCache();
-    if(salesmanSessionToken)await loadRequestState();
+    await loadRequestState();
 
     $("syncStatus").textContent=
       `Updated • ${allInvoices.length} invoices checked`;
