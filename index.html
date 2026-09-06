@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIG BROTHER — Daily Cash Collection V2 Request Batch</title>
+<title>BIG BROTHER — Daily Cash Collection V2.1 Bank Deposit Request</title>
 <style>
 :root{
   --bg:#f4f7fb;--card:#fff;--line:#dfe6ef;--text:#17304f;--muted:#6d7d91;
@@ -204,6 +204,17 @@ tbody tr:hover{background:#f9fbfe}
     <h2 id="cashRequestTitle">Daily Cash Request</h2>
     <p id="cashRequestInfo"></p>
     <div class="selected-list" id="cashRequestList"></div>
+    <div class="field">
+      <label>Deposit Status</label>
+      <select id="cashBankStatus" onchange="toggleCashBankFields()" style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;font:inherit">
+        <option value="no">Not Yet Deposited to Bank</option>
+        <option value="yes">Already Deposited to Bank</option>
+      </select>
+    </div>
+    <div id="cashBankFields" style="display:none">
+      <div class="field"><label>Bank Account</label><input id="cashBankAccount" placeholder="Example: ABA USD / ACLEDA KHR"></div>
+      <div class="field"><label>Bank Reference <span style="font-weight:400;color:#7a8798">(optional)</span></label><input id="cashBankReference" placeholder="Transaction / deposit slip reference"></div>
+    </div>
     <div class="field"><label>Note <span style="font-weight:400;color:#7a8798">(optional)</span></label><textarea id="cashRequestNote" rows="2" placeholder="Add note for Admin"></textarea></div>
     <div class="formerror" id="cashRequestError"></div>
     <button class="btn request" id="sendCashRequestBtn" style="width:100%;margin-top:12px" onclick="sendCashRequest()">✓ Send Request to Admin</button>
@@ -723,10 +734,24 @@ function openCashRequest(picked){
     </div>
   `).join("");
 
+  $("cashBankStatus").value="no";
+  $("cashBankFields").style.display="none";
+  $("cashBankAccount").value="";
+  $("cashBankReference").value="";
   $("cashRequestNote").value="";
   $("cashRequestError").textContent="";
   $("cashRequestError").classList.remove("show");
   $("cashRequestOverlay").classList.remove("hidden");
+}
+
+
+function toggleCashBankFields(){
+  const yes=$("cashBankStatus").value==="yes";
+  $("cashBankFields").style.display=yes?"":"none";
+  if(!yes){
+    $("cashBankAccount").value="";
+    $("cashBankReference").value="";
+  }
 }
 
 function closeCashRequest(){
@@ -743,6 +768,12 @@ async function sendCashRequest(){
 
   if(!invoiceIds.length)return;
 
+  if($("cashBankStatus").value==="yes" && !$("cashBankAccount").value.trim()){
+    $("cashRequestError").textContent="Bank Account is required when already deposited.";
+    $("cashRequestError").classList.add("show");
+    return;
+  }
+
   const btn=$("sendCashRequestBtn");
   btn.disabled=true;btn.textContent="Sending…";
   $("cashRequestError").textContent="";
@@ -754,6 +785,9 @@ async function sendCashRequest(){
       requestData:JSON.stringify({
         sessionToken:salesmanSessionToken,
         invoiceIds,
+        alreadyDepositedBank:$("cashBankStatus").value==="yes",
+        bankAccount:$("cashBankAccount").value.trim(),
+        bankReference:$("cashBankReference").value.trim(),
         note:$("cashRequestNote").value.trim()
       })
     });
