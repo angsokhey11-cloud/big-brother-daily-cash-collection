@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIG BROTHER — Daily Cash Summary V1.6 Stable Request Status</title>
+<title>BIG BROTHER — Daily Cash Collection V1</title>
 <style>
 :root{
   --bg:#f4f7fb;--card:#fff;--line:#dfe6ef;--text:#17304f;--muted:#6d7d91;
@@ -60,30 +60,6 @@ tbody tr:hover{background:#f9fbfe}
 .total-row{display:flex;justify-content:space-between;gap:16px;padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:13px}
 .total-row.key{background:#eef5ff;color:#143d78;font-size:15px;font-weight:900}
 .note{font-size:12px;color:#6d7d91;padding:12px 14px;border-top:1px solid var(--line);background:#fafcff}
-.checkcell{width:42px;text-align:center}
-.rowcheck,.selectall{width:17px;height:17px;cursor:pointer;accent-color:var(--blue)}
-.request-btn{background:#198754;color:#fff}
-.request-btn:hover{background:#146c43}
-.request-btn.processing{background:#e9f2ff;color:#1f5fbf}
-.cash-status{display:inline-block;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:800}
-.cash-status.approved{background:#e9f8ef;color:#198754}
-.cash-status.processing{background:#e9f2ff;color:#1f5fbf}
-.cash-status.rejected{background:#fff0f1;color:#c93c46}
-.cash-status.notapproved{background:#fff7df;color:#966200}
-.loginbox,.requestbox{width:min(480px,100%);background:#fff;border-radius:16px;padding:22px;box-shadow:0 25px 70px rgba(0,0,0,.25)}
-.loginbox h2,.requestbox h2{margin:0 0 7px}
-.loginbox p,.requestbox p{margin:0 0 16px;color:var(--muted);line-height:1.5}
-.field{margin-bottom:12px}
-.field label{display:block;font-size:12px;font-weight:800;color:#556a82;margin-bottom:5px}
-.field input,.field textarea{width:100%;border:1px solid #cbd6e3;border-radius:9px;padding:10px 11px;font:inherit}
-.remember-row{display:flex;align-items:center;gap:8px;margin:8px 0 14px;font-size:12px;color:#50647b}
-.remember-row input{width:16px;height:16px;margin:0}
-.formerror{display:none;margin-top:10px;padding:9px 10px;background:#fff0f1;color:var(--red);border-radius:8px;font-size:12px}
-.formerror.show{display:block}
-.batch-request-list{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:9px;margin:10px 0}
-.batch-request-item{display:flex;justify-content:space-between;gap:10px;padding:9px 10px;border-bottom:1px solid #edf1f5;font-size:12px}
-.batch-request-item:last-child{border-bottom:0}
-
 @media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr 1fr}.preview-meta{grid-template-columns:1fr 1fr}.topbar{align-items:flex-start;flex-direction:column}}
 @media(max-width:560px){body{padding:10px}.cards{grid-template-columns:1fr 1fr;gap:8px}.card{padding:11px}.card strong{font-size:18px}.filters{grid-template-columns:1fr}.preview-meta{grid-template-columns:1fr}.modal-actions{align-items:flex-start;flex-direction:column}}
 </style>
@@ -92,19 +68,19 @@ tbody tr:hover{background:#f9fbfe}
 <div class="wrap">
   <div class="topbar">
     <div>
-      <h1>Daily Cash Summary</h1>
-      <p class="subtitle">Cash collected directly from sales invoices, grouped by Sale Date + Salesman + Location Name. Credit is excluded.</p>
+      <h1>Daily Cash Collection</h1>
+      <p class="subtitle">Cash Sale invoices collected directly from Invoice History, grouped by Sale Date + Salesman + Location Name. USD and KHR are kept separately.</p>
     </div>
-    <span class="pill">Sales Invoice Cash Only</span>
+    <span class="pill">Invoice History · Cash Sales Only</span>
   </div>
 
   <div id="errorBox" class="statusbar"></div>
 
   <div class="cards">
-    <div class="card"><small>Cash Summary Groups</small><strong id="cardGroups">0</strong></div>
+    <div class="card"><small>Cash Collection Groups</small><strong id="cardGroups">0</strong></div>
     <div class="card"><small>Cash USD</small><strong id="cardUsd">$0.00</strong></div>
     <div class="card"><small>Cash KHR</small><strong id="cardKhr">៛0</strong></div>
-    <div class="card"><small>Daily Cash in USD</small><strong id="cardDailyUsd">$0.00</strong></div>
+    <div class="card"><small>Cash Collection in USD</small><strong id="cardDailyUsd">$0.00</strong></div>
   </div>
 
   <div class="panel">
@@ -113,12 +89,6 @@ tbody tr:hover{background:#f9fbfe}
       <input type="date" id="dateTo" onchange="applyFilters()" title="Date To">
       <select id="salesmanFilter" onchange="applyFilters()"><option value="">All Salesmen</option></select>
       <select id="locationFilter" onchange="applyFilters()"><option value="">All Locations</option></select>
-      <select id="approvalFilter" onchange="applyFilters()">
-        <option value="">All Status</option>
-        <option value="not-approved">Not Yet Approved</option>
-        <option value="approved">Approved</option>
-      </select>
-      <button class="btn request-btn" id="batchRequestBtn" onclick="openBatchRequest()" disabled>💰 Batch Request (0)</button>
       <button class="btn secondary" onclick="clearFilters()">Clear</button>
       <button class="btn primary" id="refreshBtn" onclick="loadInvoices(true,false)">↻ Refresh</button>
     </div>
@@ -127,7 +97,6 @@ tbody tr:hover{background:#f9fbfe}
       <table>
         <thead>
           <tr>
-            <th class="checkcell"><input class="selectall" id="selectAllBox" type="checkbox" onchange="toggleSelectAll(this.checked)" title="Select all eligible visible groups"></th>
             <th>Collection Date</th>
             <th>Salesman</th>
             <th>Location Name</th>
@@ -135,24 +104,23 @@ tbody tr:hover{background:#f9fbfe}
             <th class="money">Cash USD</th>
             <th class="money">Cash KHR</th>
             <th class="money">Avg. KHR Rate</th>
-            <th class="money">Daily Cash in USD</th>
-            <th>Status</th>
+            <th class="money">Cash Collection in USD</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody id="summaryBody">
-          <tr><td colspan="11" class="empty">Loading Daily Cash Summary...</td></tr>
+          <tr><td colspan="9" class="empty">Loading Daily Cash Collection...</td></tr>
         </tbody>
       </table>
     </div>
 
     <div class="foot">
-      <span id="rowCount">0 cash summary groups</span>
+      <span id="rowCount">0 cash collection groups</span>
       <span id="syncStatus">Smart Sync</span>
     </div>
 
     <div class="note">
-      Daily Cash = Cash USD + (Cash KHR ÷ Average Exchange Rate). Old receivable collections are not included here.
+      Source: Invoice History. Only invoices with Payment Method = Cash are included. USD invoices stay in Cash USD and KHR invoices stay in Cash KHR. Cash Collection in USD = Cash USD + (Cash KHR ÷ Average Exchange Rate).
     </div>
   </div>
 </div>
@@ -161,7 +129,7 @@ tbody tr:hover{background:#f9fbfe}
   <div class="modal">
     <div class="modal-actions">
       <div class="modal-title">
-        <h2>Daily Cash Preview</h2>
+        <h2>Cash Collection Preview</h2>
         <p id="previewSubtitle"></p>
       </div>
       <button class="btn secondary" onclick="closePreview()">✕ Close</button>
@@ -190,36 +158,11 @@ tbody tr:hover{background:#f9fbfe}
   </div>
 </div>
 
-
-<div class="overlay hidden" id="requestLoginOverlay">
-  <div class="loginbox">
-    <h2>🔐 Salesman Access</h2>
-    <p>Sign in with your Salesman Code to send Daily Cash Deposit Requests to Admin Work.</p>
-    <div class="field"><label>Salesman Code</label><input id="salesmanCode" type="password" placeholder="Enter salesman code" onkeydown="if(event.key==='Enter')depositLogin()"></div>
-    <label class="remember-row"><input type="checkbox" id="rememberSalesman"> Remember me on this device</label>
-    <button class="btn primary" id="depositLoginBtn" style="width:100%" onclick="depositLogin()">Sign In</button>
-    <div class="formerror" id="depositLoginError"></div>
-    <button class="btn secondary" style="width:100%;margin-top:8px" onclick="closeDepositLogin()">Cancel</button>
-  </div>
-</div>
-
-<div class="overlay hidden" id="depositRequestOverlay">
-  <div class="requestbox">
-    <h2 id="depositRequestTitle">Deposit Request</h2>
-    <p id="depositRequestInfo"></p>
-    <div class="batch-request-list" id="depositRequestList"></div>
-    <div class="field"><label>Note <span style="font-weight:400;color:#7a8798">(optional)</span></label><textarea id="depositRequestNote" rows="2" placeholder="Add note for Admin"></textarea></div>
-    <div class="formerror" id="depositRequestError"></div>
-    <button class="btn request-btn" id="sendDepositRequestBtn" style="width:100%" onclick="sendDepositRequest()">✓ Send Request to Admin</button>
-    <button class="btn secondary" style="width:100%;margin-top:8px" onclick="closeDepositRequest()">Cancel</button>
-  </div>
-</div>
-
 <script>
 const SALES_API="https://script.google.com/macros/s/AKfycbyM5mUlz5SeMZ_oPJCo2FgLkPEcodAQ7wPl5wxAdrvfqLvsZLaHxiOtS02L1Q3ZRA3D/exec";
 const MASTER_API="https://script.google.com/macros/s/AKfycbzIjs-cNehMxWTZs3ZPAosseGUu1nqACTPo3S4-onLLEYnEgqP6AUK7p3jwb6MaFr7H0w/exec";
 
-const CACHE_KEY="BB_DAILY_CASH_SUMMARY_CACHE_V1";
+const CACHE_KEY="BB_DAILY_CASH_COLLECTION_CACHE_V1";
 const SYNC_INTERVAL_MS=20000;
 
 const $=id=>document.getElementById(id);
@@ -232,17 +175,6 @@ let lastRevision="";
 let locationMap={};
 let syncBusy=false;
 let syncTimer=null;
-
-const SALESMAN_SESSION_KEY="bb_ar_salesman_session";
-const SALESMAN_DEVICE_KEY="bb_ar_salesman_device";
-let depositSessionToken=sessionStorage.getItem(SALESMAN_SESSION_KEY)||"";
-let depositDeviceToken=localStorage.getItem(SALESMAN_DEVICE_KEY)||"";
-let depositProfile=null;
-let pendingDepositGroups={};
-let depositGroupStatus={};
-let selectedDepositGroups=new Set();
-let requestGroups=[];
-let pendingLoginAction=null;
 
 function esc(v){
   return String(v??"").replace(/[&<>"']/g,m=>({
@@ -322,267 +254,6 @@ function locationNameFromCode(code){
   return locationMap[key] || String(code||"").trim() || "-";
 }
 
-
-async function apiPost(params){
-  const body=new URLSearchParams();
-  Object.entries(params).forEach(([k,v])=>body.append(k,v==null?"":String(v)));
-  const res=await fetch(SALES_API,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},body,redirect:"follow"});
-  const text=await res.text();
-  let d;
-  try{d=JSON.parse(text)}catch(_){throw new Error("Server returned an unreadable response.")}
-  if(d?.success===false)throw new Error(d.error||"Database error.");
-  return d;
-}
-
-function setDepositLoginError(msg){
-  $("depositLoginError").textContent=msg||"";
-  $("depositLoginError").classList.toggle("show",!!msg);
-}
-function setDepositRequestError(msg){
-  $("depositRequestError").textContent=msg||"";
-  $("depositRequestError").classList.toggle("show",!!msg);
-}
-
-function groupDepositKey(g){return [g.saleDate,g.salesman,g.locationCode].join("|||")}
-
-function dailyCashApprovalStatus(g){
-  const item=depositGroupStatus[groupDepositKey(g)];
-  if(!item)return "Not Yet Approved";
-  const s=String(item.status||"").trim().toLowerCase();
-  if(s==="approved"||s==="deposited")return "Approved";
-  if(s==="processing"||s==="pending")return "Processing";
-  if(s==="rejected")return "Rejected";
-  return "Not Yet Approved";
-}
-function statusBadgeClass(status){
-  const s=String(status||"").toLowerCase();
-  if(s==="approved")return "approved";
-  if(s==="processing")return "processing";
-  if(s==="rejected")return "rejected";
-  return "notapproved";
-}
-
-
-function isDepositEligible(g){
-  if(!depositProfile||!depositSessionToken)return false;
-
-  // Security follows our existing A/R rule: a Salesman may act only on
-  // Location Codes assigned to their Salesman ID.
-  const allowed=(depositProfile.locationCodes||depositProfile.locations||[])
-    .map(x=>String(x.locationCode||x.code||x).trim().toLowerCase())
-    .filter(Boolean);
-
-  if(!allowed.includes(String(g.locationCode||"").trim().toLowerCase()))return false;
-  return dailyCashApprovalStatus(g)!=="Approved";
-}
-
-function updateBatchRequestControls(){
-  const btn=$("batchRequestBtn");
-  if(!btn)return;
-  btn.textContent=`💰 Batch Request (${selectedDepositGroups.size})`;
-  btn.disabled=selectedDepositGroups.size===0;
-  const all=$("selectAllBox");
-  if(all){
-    const eligible=filteredGroups.filter(g=>isDepositEligible(g)&&!pendingDepositGroups[groupDepositKey(g)]).map(groupDepositKey);
-    const selectedVisible=eligible.filter(k=>selectedDepositGroups.has(k)).length;
-    all.checked=eligible.length>0&&selectedVisible===eligible.length;
-    all.indeterminate=selectedVisible>0&&selectedVisible<eligible.length;
-  }
-}
-
-function toggleDepositGroup(key,checked){
-  checked?selectedDepositGroups.add(String(key)):selectedDepositGroups.delete(String(key));
-  updateBatchRequestControls();
-}
-
-function toggleSelectAll(checked){
-  filteredGroups.forEach(g=>{
-    const key=groupDepositKey(g);
-    if(isDepositEligible(g)&&!pendingDepositGroups[key]){
-      if(checked)selectedDepositGroups.add(key);else selectedDepositGroups.delete(key);
-    }
-  });
-  renderGroups();
-}
-
-async function loadPendingDepositState(){
-  if(!depositSessionToken){pendingDepositGroups={};return}
-  try{
-    const d=await api({
-      action:"myDailyCashDepositRequests",
-      sessionToken:depositSessionToken,
-      _ts:Date.now()
-    });
-    pendingDepositGroups=d.pendingGroupKeys||{};
-    depositGroupStatus=d.groupStatus||{};
-  }catch(e){
-    console.warn("Pending deposit state:",e);
-  }
-}
-
-function requireDepositLogin(nextAction){
-  if(depositSessionToken&&depositProfile){
-    nextAction();
-    return;
-  }
-  pendingLoginAction=nextAction;
-  $("requestLoginOverlay").classList.remove("hidden");
-}
-
-function closeDepositLogin(){
-  $("requestLoginOverlay").classList.add("hidden");
-  pendingLoginAction=null;
-}
-
-async function depositLogin(){
-  const code=$("salesmanCode").value.trim();
-  const remember=$("rememberSalesman").checked;
-  if(!code)return setDepositLoginError("Salesman Code is required.");
-
-  const btn=$("depositLoginBtn");
-  btn.disabled=true;btn.textContent="Checking…";setDepositLoginError("");
-
-  try{
-    const d=await apiPost({action:"arLogin",salesmanCode:code,rememberDevice:remember});
-    if(!d||!d.authorized)throw new Error(d?.error||"Access denied.");
-
-    depositSessionToken=d.sessionToken;
-    depositProfile=d;
-    sessionStorage.setItem(SALESMAN_SESSION_KEY,depositSessionToken);
-
-    if(remember&&d.deviceToken){
-      depositDeviceToken=d.deviceToken;
-      localStorage.setItem(SALESMAN_DEVICE_KEY,depositDeviceToken);
-    }else if(!remember){
-      depositDeviceToken="";
-      localStorage.removeItem(SALESMAN_DEVICE_KEY);
-    }
-
-    $("salesmanCode").value="";
-    $("requestLoginOverlay").classList.add("hidden");
-    await loadPendingDepositState();
-    renderGroups();
-
-    const action=pendingLoginAction;
-    pendingLoginAction=null;
-    if(action)action();
-  }catch(e){
-    setDepositLoginError(e.message||"Access denied.");
-  }finally{
-    btn.disabled=false;btn.textContent="Sign In";
-  }
-}
-
-async function restoreDepositAccess(){
-  depositSessionToken=sessionStorage.getItem(SALESMAN_SESSION_KEY)||"";
-  depositDeviceToken=localStorage.getItem(SALESMAN_DEVICE_KEY)||"";
-  $("rememberSalesman").checked=!!depositDeviceToken;
-
-  if(depositSessionToken){
-    try{
-      const d=await api({action:"arList",sessionToken:depositSessionToken,view:"your"});
-      depositProfile=d.access||null;
-      await loadPendingDepositState();
-      renderGroups();
-      return;
-    }catch(_){
-      depositSessionToken="";
-      sessionStorage.removeItem(SALESMAN_SESSION_KEY);
-    }
-  }
-
-  if(depositDeviceToken){
-    try{
-      const d=await apiPost({action:"arDeviceLogin",deviceToken:depositDeviceToken,role:"salesman"});
-      depositSessionToken=d.sessionToken;
-      depositProfile=d;
-      sessionStorage.setItem(SALESMAN_SESSION_KEY,depositSessionToken);
-      await loadPendingDepositState();
-      renderGroups();
-    }catch(_){
-      depositDeviceToken="";
-      localStorage.removeItem(SALESMAN_DEVICE_KEY);
-    }
-  }
-}
-
-function openSingleRequest(key){
-  requireDepositLogin(()=>{
-    const g=groups.find(x=>groupDepositKey(x)===key);
-    if(!g)return;
-    if(!isDepositEligible(g))return alert("You can only request Daily Cash from your assigned Location Code.");
-    if(pendingDepositGroups[key])return alert("This Daily Cash group already has a Processing Deposit Request.");
-    openDepositRequest([g]);
-  });
-}
-
-function openBatchRequest(){
-  requireDepositLogin(()=>{
-    const picked=groups.filter(g=>selectedDepositGroups.has(groupDepositKey(g)));
-    if(!picked.length)return alert("Please select at least one Daily Cash group.");
-    const invalid=picked.find(g=>!isDepositEligible(g));
-    if(invalid)return alert("Batch Request can only include Daily Cash from your assigned Location Codes.");
-    const processing=picked.find(g=>pendingDepositGroups[groupDepositKey(g)]);
-    if(processing)return alert("One selected group already has a Processing Deposit Request.");
-    openDepositRequest(picked);
-  });
-}
-
-function openDepositRequest(picked){
-  requestGroups=picked.slice();
-  $("depositRequestTitle").textContent=picked.length===1?"Deposit Request":"Batch Deposit Request";
-  $("depositRequestInfo").textContent=picked.length===1
-    ? `${picked[0].saleDate} · ${picked[0].locationName} · ${picked[0].salesman}`
-    : `${picked.length} Daily Cash groups · ${picked[0].salesman}`;
-  $("depositRequestList").innerHTML=picked.map(g=>`
-    <div class="batch-request-item">
-      <span><strong>${esc(g.saleDate)}</strong><br>${esc(g.locationName)}</span>
-      <span>${usd(g.cashUSD)} + ${khr(g.cashKHR)}</span>
-    </div>`).join("");
-  $("depositRequestNote").value="";
-  setDepositRequestError("");
-  $("depositRequestOverlay").classList.remove("hidden");
-}
-
-function closeDepositRequest(){
-  $("depositRequestOverlay").classList.add("hidden");
-  requestGroups=[];
-}
-
-async function sendDepositRequest(){
-  if(!depositSessionToken||!requestGroups.length)return;
-
-  const btn=$("sendDepositRequestBtn");
-  btn.disabled=true;btn.textContent="Sending…";setDepositRequestError("");
-
-  try{
-    const payload={
-      sessionToken:depositSessionToken,
-      groups:requestGroups.map(g=>({
-        collectionDate:g.saleDate,
-        salesman:g.salesman,
-        locationCode:g.locationCode
-      })),
-      note:$("depositRequestNote").value.trim()
-    };
-
-    const d=await apiPost({
-      action:requestGroups.length===1?"dailyCashDepositRequest":"dailyCashDepositBatchRequest",
-      requestData:JSON.stringify(payload)
-    });
-
-    closeDepositRequest();
-    selectedDepositGroups.clear();
-    await loadPendingDepositState();
-    renderGroups();
-    alert(`${requestGroups.length>1?"Batch Deposit Request":"Deposit Request"} sent to Admin.\nRequest ID: ${d.requestId||""}\nStatus: ${d.status||"Processing"}`);
-  }catch(e){
-    setDepositRequestError(e.message||"Could not send Deposit Request.");
-  }finally{
-    btn.disabled=false;btn.textContent="✓ Send Request to Admin";
-  }
-}
-
 async function loadLocationMap(){
   try{
     const d=await fetch(
@@ -619,15 +290,19 @@ function groupKey(inv){
 }
 
 function isInvoiceCash(inv){
-  const paid=num(inv.amountPaid);
   const method=String(inv.paymentMethod||"").trim().toLowerCase();
+  const currency=String(inv.currency||"USD").trim().toUpperCase();
+  const paid=num(inv.amountPaid);
 
-  // No money collected = no Daily Cash.
+  // Daily Cash Collection uses CASH SALE invoices only.
+  // Bank and Credit invoices are excluded.
+  if(method!=="cash") return false;
+
+  // Keep only the two currencies used by BIG BROTHER.
+  if(currency!=="USD" && currency!=="KHR") return false;
+
+  // A cash invoice must actually contain collected money.
   if(paid<=0) return false;
-
-  // "Credit" itself is not counted. If the invoice carries a real paid amount,
-  // the actual paid amount is still cash collected on the invoice.
-  if(method==="credit" && paid<=0) return false;
 
   return true;
 }
@@ -745,24 +420,20 @@ function applyFilters(){
   const t=$("dateTo").value;
   const s=$("salesmanFilter").value;
   const l=$("locationFilter").value;
-  const approval=$("approvalFilter").value;
 
-  filteredGroups=groups.filter(g=>{
-    const st=dailyCashApprovalStatus(g);
-    return (!f||g.saleDate>=f) &&
-      (!t||g.saleDate<=t) &&
-      (!s||g.salesman===s) &&
-      (!l||g.locationName===l) &&
-      (approval!=="approved"||st==="Approved") &&
-      (approval!=="not-approved"||st!=="Approved");
-  });
+  filteredGroups=groups.filter(g=>
+    (!f||g.saleDate>=f) &&
+    (!t||g.saleDate<=t) &&
+    (!s||g.salesman===s) &&
+    (!l||g.locationName===l)
+  );
 
   renderGroups();
 }
 
 function renderGroups(){
   $("rowCount").textContent=
-    `${filteredGroups.length} cash summary group${filteredGroups.length===1?"":"s"}`;
+    `${filteredGroups.length} cash collection group${filteredGroups.length===1?"":"s"}`;
 
   $("cardGroups").textContent=filteredGroups.length;
 
@@ -779,16 +450,12 @@ function renderGroups(){
 
   if(!filteredGroups.length){
     $("summaryBody").innerHTML=
-      '<tr><td colspan="11" class="empty">No Daily Cash groups found.</td></tr>';
+      '<tr><td colspan="9" class="empty">No Daily Cash groups found.</td></tr>';
     return;
   }
 
   $("summaryBody").innerHTML=filteredGroups.map(g=>`
     <tr>
-      <td class="checkcell"><input class="rowcheck" type="checkbox"
-        ${selectedDepositGroups.has(groupDepositKey(g))?"checked":""}
-        ${(!isDepositEligible(g)||pendingDepositGroups[groupDepositKey(g)])?"disabled":""}
-        onchange='toggleDepositGroup(${JSON.stringify(groupDepositKey(g))},this.checked)'></td>
       <td><strong>${esc(g.saleDate)}</strong></td>
       <td>${esc(g.salesman)}</td>
       <td><strong>${esc(g.locationName)}</strong></td>
@@ -801,18 +468,13 @@ function renderGroups(){
       <td class="money daily-key">
         ${g.dailyCashUSD==null?"—":usd(g.dailyCashUSD)}
       </td>
-      <td><span class="cash-status ${statusBadgeClass(dailyCashApprovalStatus(g))}">${esc(dailyCashApprovalStatus(g))}</span></td>
       <td>
-        <button class="btn primary" onclick='openPreview(${JSON.stringify(g.key)})'>Preview</button>
-        ${dailyCashApprovalStatus(g)==="Approved"
-          ? '<button class="btn request-btn" disabled>Approved</button>'
-          : pendingDepositGroups[groupDepositKey(g)]
-            ? '<button class="btn request-btn processing" disabled>Processing</button>'
-            : `<button class="btn request-btn" onclick='openSingleRequest(${JSON.stringify(groupDepositKey(g))})'>Request</button>`}
+        <button class="btn primary" onclick='openPreview(${JSON.stringify(g.key)})'>
+          Preview
+        </button>
       </td>
     </tr>
   `).join("");
-  updateBatchRequestControls();
 }
 
 function clearFilters(){
@@ -820,8 +482,6 @@ function clearFilters(){
   $("dateTo").value="";
   $("salesmanFilter").value="";
   $("locationFilter").value="";
-  $("approvalFilter").value="";
-  selectedDepositGroups.clear();
   applyFilters();
 }
 
@@ -905,7 +565,7 @@ async function loadInvoices(manual=false,silent=false){
     }else{
       showError(e.message||"Could not load sales invoice cash.");
       $("summaryBody").innerHTML=
-        '<tr><td colspan="11" class="empty">Could not load Daily Cash Summary.</td></tr>';
+        '<tr><td colspan="9" class="empty">Could not load Daily Cash Collection.</td></tr>';
       $("syncStatus").textContent="Load failed";
     }
   }finally{
@@ -1015,7 +675,7 @@ function openPreview(key){
       <strong>${converted==null?"—":usd(converted)}</strong>
     </div>
     <div class="total-row key">
-      <span>Daily Cash in USD</span>
+      <span>Cash Collection in USD</span>
       <strong>${g.dailyCashUSD==null?"—":usd(g.dailyCashUSD)}</strong>
     </div>
   `;
@@ -1040,14 +700,10 @@ function closePreview(){
   }
 
   startSmartSync();
-  await restoreDepositAccess();
 })();
 
 document.addEventListener("visibilitychange",()=>{
-  if(!document.hidden){
-    smartSync(true);
-    if(depositSessionToken)loadPendingDepositState().then(renderGroups);
-  }
+  if(!document.hidden) smartSync(true);
 });
 </script>
 </body>
