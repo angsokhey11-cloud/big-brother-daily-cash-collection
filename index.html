@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIG BROTHER — Daily Cash Summary V1.2 Deposit Request</title>
+<title>BIG BROTHER — Daily Cash Summary V1.3 Approval Status Filter</title>
 <style>
 :root{
   --bg:#f4f7fb;--card:#fff;--line:#dfe6ef;--text:#17304f;--muted:#6d7d91;
@@ -65,6 +65,11 @@ tbody tr:hover{background:#f9fbfe}
 .request-btn{background:#198754;color:#fff}
 .request-btn:hover{background:#146c43}
 .request-btn.processing{background:#e9f2ff;color:#1f5fbf}
+.cash-status{display:inline-block;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:800}
+.cash-status.approved{background:#e9f8ef;color:#198754}
+.cash-status.processing{background:#e9f2ff;color:#1f5fbf}
+.cash-status.rejected{background:#fff0f1;color:#c93c46}
+.cash-status.notapproved{background:#fff7df;color:#966200}
 .loginbox,.requestbox{width:min(480px,100%);background:#fff;border-radius:16px;padding:22px;box-shadow:0 25px 70px rgba(0,0,0,.25)}
 .loginbox h2,.requestbox h2{margin:0 0 7px}
 .loginbox p,.requestbox p{margin:0 0 16px;color:var(--muted);line-height:1.5}
@@ -108,6 +113,11 @@ tbody tr:hover{background:#f9fbfe}
       <input type="date" id="dateTo" onchange="applyFilters()" title="Date To">
       <select id="salesmanFilter" onchange="applyFilters()"><option value="">All Salesmen</option></select>
       <select id="locationFilter" onchange="applyFilters()"><option value="">All Locations</option></select>
+      <select id="approvalFilter" onchange="applyFilters()">
+        <option value="">All Status</option>
+        <option value="not-approved">Not Yet Approved</option>
+        <option value="approved">Approved</option>
+      </select>
       <button class="btn request-btn" id="batchRequestBtn" onclick="openBatchRequest()" disabled>💰 Batch Request (0)</button>
       <button class="btn secondary" onclick="clearFilters()">Clear</button>
       <button class="btn primary" id="refreshBtn" onclick="loadInvoices(true,false)">↻ Refresh</button>
@@ -126,11 +136,12 @@ tbody tr:hover{background:#f9fbfe}
             <th class="money">Cash KHR</th>
             <th class="money">Avg. KHR Rate</th>
             <th class="money">Daily Cash in USD</th>
+            <th>Status</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody id="summaryBody">
-          <tr><td colspan="10" class="empty">Loading Daily Cash Summary...</td></tr>
+          <tr><td colspan="11" class="empty">Loading Daily Cash Summary...</td></tr>
         </tbody>
       </table>
     </div>
@@ -228,6 +239,7 @@ let depositSessionToken=sessionStorage.getItem(SALESMAN_SESSION_KEY)||"";
 let depositDeviceToken=localStorage.getItem(SALESMAN_DEVICE_KEY)||"";
 let depositProfile=null;
 let pendingDepositGroups={};
+let depositGroupStatus={};
 let selectedDepositGroups=new Set();
 let requestGroups=[];
 let pendingLoginAction=null;
@@ -333,6 +345,24 @@ function setDepositRequestError(msg){
 
 function groupDepositKey(g){return [g.saleDate,g.salesman,g.locationCode].join("|||")}
 
+function dailyCashApprovalStatus(g){
+  const item=depositGroupStatus[groupDepositKey(g)];
+  if(!item)return "Not Yet Approved";
+  const s=String(item.status||"").trim().toLowerCase();
+  if(s==="approved")return "Approved";
+  if(s==="processing"||s==="pending")return "Processing";
+  if(s==="rejected")return "Rejected";
+  return "Not Yet Approved";
+}
+function statusBadgeClass(status){
+  const s=String(status||"").toLowerCase();
+  if(s==="approved")return "approved";
+  if(s==="processing")return "processing";
+  if(s==="rejected")return "rejected";
+  return "notapproved";
+}
+
+
 function isDepositEligible(g){
   if(!depositProfile||!depositSessionToken)return false;
 
@@ -342,7 +372,8 @@ function isDepositEligible(g){
     .map(x=>String(x.locationCode||x.code||x).trim().toLowerCase())
     .filter(Boolean);
 
-  return allowed.includes(String(g.locationCode||"").trim().toLowerCase());
+  if(!allowed.includes(String(g.locationCode||"").trim().toLowerCase()))return false;
+  return dailyCashApprovalStatus(g)!=="Approved";
 }
 
 function updateBatchRequestControls(){
@@ -383,6 +414,7 @@ async function loadPendingDepositState(){
       _ts:Date.now()
     });
     pendingDepositGroups=d.pendingGroupKeys||{};
+    depositGroupStatus=d.groupStatus||{};
   }catch(e){
     console.warn("Pending deposit state:",e);
   }
@@ -713,13 +745,17 @@ function applyFilters(){
   const t=$("dateTo").value;
   const s=$("salesmanFilter").value;
   const l=$("locationFilter").value;
+  const approval=$("approvalFilter").value;
 
-  filteredGroups=groups.filter(g=>
-    (!f||g.saleDate>=f) &&
-    (!t||g.saleDate<=t) &&
-    (!s||g.salesman===s) &&
-    (!l||g.locationName===l)
-  );
+  filteredGroups=groups.filter(g=>{
+    const status=dailyCashApprovalStatus(g);
+    return (!f||g.saleDate>=f) &&
+      (!t||g.saleDate<=t) &&
+      (!s||g.salesman===s) &&
+      (!l||g.locationName===l) &&
+      (approval!=="approved"||status==="Approved") &&
+      (approval!=="not-approved"||status!=="Approved");
+  });
 
   renderGroups();
 }
@@ -743,7 +779,7 @@ function renderGroups(){
 
   if(!filteredGroups.length){
     $("summaryBody").innerHTML=
-      '<tr><td colspan="10" class="empty">No Daily Cash groups found.</td></tr>';
+      '<tr><td colspan="11" class="empty">No Daily Cash groups found.</td></tr>';
     return;
   }
 
@@ -765,11 +801,14 @@ function renderGroups(){
       <td class="money daily-key">
         ${g.dailyCashUSD==null?"—":usd(g.dailyCashUSD)}
       </td>
+      <td><span class="cash-status ${statusBadgeClass(dailyCashApprovalStatus(g))}">${esc(dailyCashApprovalStatus(g))}</span></td>
       <td>
         <button class="btn primary" onclick='openPreview(${JSON.stringify(g.key)})'>Preview</button>
-        ${pendingDepositGroups[groupDepositKey(g)]
-          ? '<button class="btn request-btn processing" disabled>Processing</button>'
-          : `<button class="btn request-btn" onclick='openSingleRequest(${JSON.stringify(groupDepositKey(g))})'>Request</button>`}
+        ${dailyCashApprovalStatus(g)==="Approved"
+          ? '<button class="btn request-btn" disabled>Approved</button>'
+          : pendingDepositGroups[groupDepositKey(g)]
+            ? '<button class="btn request-btn processing" disabled>Processing</button>'
+            : `<button class="btn request-btn" onclick='openSingleRequest(${JSON.stringify(groupDepositKey(g))})'>Request</button>`}
       </td>
     </tr>
   `).join("");
@@ -781,6 +820,7 @@ function clearFilters(){
   $("dateTo").value="";
   $("salesmanFilter").value="";
   $("locationFilter").value="";
+  $("approvalFilter").value="";
   selectedDepositGroups.clear();
   applyFilters();
 }
@@ -865,7 +905,7 @@ async function loadInvoices(manual=false,silent=false){
     }else{
       showError(e.message||"Could not load sales invoice cash.");
       $("summaryBody").innerHTML=
-        '<tr><td colspan="10" class="empty">Could not load Daily Cash Summary.</td></tr>';
+        '<tr><td colspan="11" class="empty">Could not load Daily Cash Summary.</td></tr>';
       $("syncStatus").textContent="Load failed";
     }
   }finally{
