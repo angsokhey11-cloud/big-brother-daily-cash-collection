@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIG BROTHER — Daily Cash Collection V4 Cash Close & Vault</title>
+<title>BIG BROTHER — Daily Cash Collection V4.4 Responsive Close Workspace</title>
 <style>
 :root{
   --bg:#f4f7fb;--card:#fff;--line:#dfe6ef;--text:#17304f;--muted:#6d7d91;
@@ -77,6 +77,160 @@ tbody tr:hover{background:#f9fbfe}
 .status-pill.available{background:#eaf3ff;color:#1f5fbf}
 .status-pill.mixed{background:#f0edf9;color:#6649a8}
 .products-cell{white-space:normal;min-width:240px;line-height:1.45}
+/* ===== V4.4 CLOSE SELECTED RESPONSIVE WORKSPACE ===== */
+.close-workspace{
+  width:min(1500px,98vw);
+  height:min(920px,96vh);
+  background:#fff;
+  border-radius:18px;
+  box-shadow:0 28px 80px rgba(14,39,73,.28);
+  display:grid;
+  grid-template-columns:minmax(0,1.7fr) minmax(360px,.75fr);
+  overflow:hidden;
+}
+.close-left{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  border-right:1px solid var(--line);
+  background:#fff;
+}
+.close-right{
+  min-width:0;
+  overflow:auto;
+  padding:20px;
+  background:#fbfcfe;
+}
+.close-head{
+  padding:18px 20px 14px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:flex-start;
+}
+.close-head h2{margin:0 0 5px;font-size:24px}
+.close-head p{margin:0;color:var(--muted);font-size:13px}
+.rulebar{
+  margin:12px 16px;
+  border:1px solid #cfe0f7;
+  background:#eef6ff;
+  color:#234f85;
+  border-radius:10px;
+  padding:10px 12px;
+  font-size:12px;
+  font-weight:700;
+}
+.close-selectbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 16px;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  background:#fafcff;
+}
+.close-selectbar .left{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  font-size:12px;
+  font-weight:800;
+}
+.close-list-wrap{
+  flex:1;
+  min-height:0;
+  overflow:auto;
+}
+.close-list-wrap table{
+  min-width:760px;
+}
+.close-list-wrap th,
+.close-list-wrap td{
+  padding:8px 10px;
+  font-size:12px;
+}
+.close-pagination{
+  padding:10px 16px;
+  border-top:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  background:#fff;
+}
+.page-controls{display:flex;align-items:center;gap:6px}
+.page-btn{
+  min-width:34px;height:34px;padding:0 10px;border:1px solid var(--line);
+  background:#fff;border-radius:8px;cursor:pointer;font-weight:800;color:var(--text)
+}
+.page-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.page-btn:disabled{opacity:.4;cursor:not-allowed}
+.close-right-title{margin:0 0 4px;font-size:21px}
+.close-right-sub{margin:0 0 14px;color:var(--muted);font-size:12px}
+.close-metrics{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin:12px 0;
+}
+.close-metric{
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:12px;
+  padding:12px;
+}
+.close-metric small{display:block;color:var(--muted);font-weight:800;margin-bottom:5px}
+.close-metric strong{font-size:19px}
+.close-metric.good{background:#edf9f2;border-color:#ccebd8}
+.close-metric.bad{background:#fff3f3;border-color:#ffd6d8}
+.input-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.paginationbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:9px 12px;border-top:1px solid var(--line);background:#fff;
+}
+.paginationbar .info{font-size:12px;color:var(--muted)}
+.checkall-wrap{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800}
+.checkall-wrap input{width:18px;height:18px}
+.group-rule-note{
+  padding:9px 12px;border-radius:9px;background:#eff9f3;color:#256744;
+  font-size:12px;font-weight:700;margin-bottom:10px
+}
+.main-table-actions{display:flex;gap:6px;align-items:center}
+@media(max-width:1100px){
+  body{padding:10px}
+  .wrap{max-width:none}
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .filters{grid-template-columns:1fr 1fr auto auto}
+  .close-workspace{
+    grid-template-columns:1fr;
+    height:97vh;
+    overflow:auto;
+  }
+  .close-left{border-right:0;border-bottom:1px solid var(--line);min-height:520px}
+  .close-right{overflow:visible}
+}
+@media(max-width:720px){
+  .topbar{align-items:flex-start}
+  .topbar h1{font-size:22px}
+  .pill{display:none}
+  .cards{grid-template-columns:1fr 1fr}
+  .filters{grid-template-columns:1fr 1fr}
+  .filters .btn{width:100%}
+  .requestbar{align-items:stretch}
+  .requestbar .sum{display:grid;grid-template-columns:1fr 1fr}
+  .summary-toolbar{justify-content:stretch}
+  .summary-toolbar .btn{width:100%}
+  .close-head{padding:14px}
+  .close-head h2{font-size:20px}
+  .close-left{min-height:480px}
+  .close-right{padding:14px}
+  .close-metrics{grid-template-columns:1fr 1fr}
+  .input-grid{grid-template-columns:1fr}
+  .close-pagination{align-items:flex-start;flex-direction:column}
+}
+
 .summary-toolbar{display:flex;justify-content:flex-end;padding:0 14px 12px}
 .summary-modal{width:min(1350px,98vw);max-height:95vh;overflow:auto;background:#eef2f7;border-radius:16px;padding:16px;box-shadow:0 25px 70px rgba(0,0,0,.3)}
 .invoice-detail-panel{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
@@ -112,7 +266,6 @@ tbody tr:hover{background:#f9fbfe}
     <div class="filters">
       <input type="date" id="dateFrom" onchange="applyFilters()" title="Date From">
       <input type="date" id="dateTo" onchange="applyFilters()" title="Date To">
-      <select id="salesmanFilter" onchange="applyFilters()"><option value="">All Salesmen</option></select>
       <select id="locationFilter" onchange="applyFilters()"><option value="">All Locations</option></select>
       <button class="btn secondary" onclick="clearFilters()">Clear</button>
       <button class="btn primary" id="refreshBtn" onclick="loadInvoices(true,false)">↻ Refresh</button>
@@ -124,7 +277,7 @@ tbody tr:hover{background:#f9fbfe}
 
     <div class="requestbar">
       <div class="sum">
-        <span>Selected Rows<strong id="selectedGroupsCount">0</strong></span>
+        <span>Selected Invoices<strong id="selectedGroupsCount">0</strong></span>
         <span>Selected Invoices<strong id="selectedInvoicesCount">0</strong></span>
         <span>Cash USD<strong id="selectedCashUSD">$0.00</strong></span>
         <span>Cash KHR<strong id="selectedCashKHR">៛0</strong></span>
@@ -137,10 +290,14 @@ tbody tr:hover{background:#f9fbfe}
       <table>
         <thead>
           <tr>
-            <th class="center">Select</th>
+            <th class="center">
+              <label class="checkall-wrap" title="Check all eligible invoices on this page">
+                <input id="checkAllPage" type="checkbox" onchange="toggleCheckAllPage(this.checked)">
+                <span>All</span>
+              </label>
+            </th>
             <th>Collection Date</th>
             <th>Invoice No</th>
-            <th>Salesman</th>
             <th>Location Name</th>
             <th>Customer Name</th>
             <th class="money">Cash USD</th>
@@ -152,18 +309,18 @@ tbody tr:hover{background:#f9fbfe}
           </tr>
         </thead>
         <tbody id="summaryBody">
-          <tr><td colspan="12" class="empty">Loading Daily Cash Collection...</td></tr>
+          <tr><td colspan="11" class="empty">Loading Daily Cash Collection...</td></tr>
         </tbody>
       </table>
     </div>
 
-    <div class="foot">
-      <span id="rowCount">0 cash invoices</span>
-      <span id="syncStatus">Smart Sync</span>
+    <div class="paginationbar">
+      <div class="info"><span id="rowCount">0 cash invoices</span> · <span id="syncStatus">Smart Sync</span></div>
+      <div class="page-controls" id="mainPagination"></div>
     </div>
 
     <div class="note">
-      Source: Invoice History. OPEN and PENDING Cash invoices are shown. Pending stays visible until Admin approves; approved/closed invoices disappear.
+      Source: Invoice History. OPEN and PENDING Cash invoices are shown. Close batches can include only the same Sale Date, Location, and Salesman. Maximum 20 rows are shown per page.
     </div>
   </div>
 </div>
@@ -206,50 +363,106 @@ tbody tr:hover{background:#f9fbfe}
 
 
 
+
 <div class="overlay hidden" id="cashRequestOverlay">
-  <div class="requestbox" style="width:min(720px,96vw)">
-    <h2 id="cashRequestTitle">Close Daily Cash</h2>
-    <p id="cashRequestInfo"></p>
-    <div class="selected-list" id="cashRequestList"></div>
-
-    <div class="field">
-      <label>Close Method</label>
-      <select id="closeMethod" onchange="toggleCloseMethod()" style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;font:inherit">
-        <option value="Hand Cash to Accountant">Hand Cash to Accountant → Cash Vault</option>
-        <option value="Deposit to Company Bank">Deposit to Company Bank Myself</option>
-      </select>
-    </div>
-
-    <div class="preview-meta" style="margin-top:12px">
-      <div class="meta-box"><small>Expected Invoice Value</small><strong id="closeExpectedUSD">$0.00</strong></div>
-      <div class="meta-box"><small>Actual Cash Value</small><strong id="closeActualEquivalent">$0.00</strong></div>
-      <div class="meta-box"><small>Difference</small><strong id="closeDifference">$0.00</strong></div>
-      <div class="meta-box"><small>Result</small><strong id="closeMatchStatus">Enter Cash</strong></div>
-    </div>
-
-    <div class="field"><label>Actual USD Cash</label><input id="actualCashUSD" type="number" min="0" step="0.01" value="0" oninput="recalculateClose()"></div>
-    <div class="field"><label>Actual KHR Cash</label><input id="actualCashKHR" type="number" min="0" step="100" value="0" oninput="recalculateClose()"></div>
-    <div class="field"><label>Closing Exchange Rate</label><input id="closingRate" type="number" min="0" step="1" placeholder="Example: 4060" oninput="recalculateClose()"></div>
-
-    <div id="selfDepositFields" style="display:none">
-      <div class="field"><label>Company Bank Account</label><input id="closeBankAccount" placeholder="Example: ABA USD"></div>
-      <div class="field"><label>Deposit Exchange Rate</label><input id="depositRate" type="number" min="0" step="1" placeholder="Rate used to exchange KHR to USD" oninput="recalculateClose()"></div>
-      <div class="field"><label>Final Bank Deposit USD</label><input id="bankDepositUSD" type="number" min="0" step="0.01" oninput="recalculateClose()"></div>
-      <div class="field"><label>Bank Transaction ID</label><input id="closeTransactionId" placeholder="Fresh unique Transaction ID"></div>
-
-      <div class="preview-meta" style="margin-top:12px">
-        <div class="meta-box"><small>Expected Bank USD</small><strong id="expectedBankUSD">$0.00</strong></div>
-        <div class="meta-box"><small>Bank Difference</small><strong id="bankDifferenceUSD">$0.00</strong></div>
+  <div class="close-workspace">
+    <section class="close-left">
+      <div class="close-head">
+        <div>
+          <h2 id="cashRequestTitle">Close Daily Cash</h2>
+          <p id="cashRequestInfo">Review selected invoices before sending the close to Admin.</p>
+        </div>
+        <button class="btn secondary" onclick="closeCashRequest()">✕ Close</button>
       </div>
-    </div>
 
-    <div class="field"><label>Note <span style="font-weight:400;color:#7a8798">(optional)</span></label><textarea id="cashRequestNote" rows="2"></textarea></div>
-    <div class="formerror" id="cashRequestError"></div>
+      <div class="rulebar">
+        Batch rule: selected invoices must have the same Sale Date, same Location, and same Salesman. Salesman is checked automatically and hidden from this workspace.
+      </div>
 
-    <button class="btn request" id="sendCashRequestBtn" style="width:100%;margin-top:12px" onclick="sendCashRequest()">✓ Send Close to Admin</button>
-    <button class="btn secondary" style="width:100%;margin-top:8px" onclick="closeCashRequest()">Cancel</button>
+      <div class="close-selectbar">
+        <div class="left">
+          <input id="closeCheckAllPage" class="select-box" type="checkbox" onchange="toggleCloseCheckAllPage(this.checked)">
+          <label for="closeCheckAllPage">Check All (This Page)</label>
+          <span id="closeSelectedCount">0 selected</span>
+        </div>
+        <strong id="closePageTotal">$0.00</strong>
+      </div>
+
+      <div class="close-list-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="center">Select</th>
+              <th>#</th>
+              <th>Invoice No</th>
+              <th>Customer Name</th>
+              <th>Sale Date</th>
+              <th>Location</th>
+              <th class="money">Cash USD</th>
+              <th class="money">Cash KHR</th>
+              <th class="money">Total USD</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="cashRequestList"></tbody>
+        </table>
+      </div>
+
+      <div class="close-pagination">
+        <span id="closePageInfo">0 selected invoices</span>
+        <div class="page-controls" id="closePagination"></div>
+      </div>
+    </section>
+
+    <aside class="close-right">
+      <h3 class="close-right-title">Close Daily Cash</h3>
+      <p class="close-right-sub">Count the real physical USD and KHR. Submit only when actual cash matches the selected invoice value.</p>
+
+      <div class="group-rule-note" id="closeGroupRule">Same Sale Date · Same Location · Same Salesman</div>
+
+      <div class="field">
+        <label>Close Method</label>
+        <select id="closeMethod" onchange="toggleCloseMethod()">
+          <option value="Hand Cash to Accountant">Hand Cash to Accountant → Cash Vault</option>
+          <option value="Deposit to Company Bank">Deposit to Company Bank Myself</option>
+        </select>
+      </div>
+
+      <div class="close-metrics">
+        <div class="close-metric"><small>Expected Invoice Value</small><strong id="closeExpectedUSD">$0.00</strong></div>
+        <div class="close-metric"><small>Actual Cash Value</small><strong id="closeActualEquivalent">$0.00</strong></div>
+        <div class="close-metric"><small>Difference</small><strong id="closeDifference">$0.00</strong></div>
+        <div class="close-metric" id="closeResultCard"><small>Result</small><strong id="closeMatchStatus">Enter Cash</strong></div>
+      </div>
+
+      <div class="input-grid">
+        <div class="field"><label>Actual USD Cash</label><input id="actualCashUSD" type="number" min="0" step="0.01" value="0" oninput="recalculateClose()"></div>
+        <div class="field"><label>Actual KHR Cash</label><input id="actualCashKHR" type="number" min="0" step="100" value="0" oninput="recalculateClose()"></div>
+      </div>
+
+      <div class="field"><label>Closing Exchange Rate (KHR per USD)</label><input id="closingRate" type="number" min="0" step="1" placeholder="Example: 4060" oninput="recalculateClose()"></div>
+
+      <div id="selfDepositFields" style="display:none">
+        <div class="field"><label>Company Bank Account</label><input id="closeBankAccount" placeholder="Example: ABA USD"></div>
+        <div class="field"><label>Deposit Exchange Rate</label><input id="depositRate" type="number" min="0" step="1" placeholder="Rate used to exchange KHR to USD" oninput="recalculateClose()"></div>
+        <div class="field"><label>Final Bank Deposit USD</label><input id="bankDepositUSD" type="number" min="0" step="0.01" oninput="recalculateClose()"></div>
+        <div class="field"><label>Bank Transaction ID</label><input id="closeTransactionId" placeholder="Fresh unique Transaction ID"></div>
+
+        <div class="close-metrics">
+          <div class="close-metric"><small>Expected Bank USD</small><strong id="expectedBankUSD">$0.00</strong></div>
+          <div class="close-metric"><small>Bank Difference</small><strong id="bankDifferenceUSD">$0.00</strong></div>
+        </div>
+      </div>
+
+      <div class="field"><label>Note <span style="font-weight:400;color:var(--muted)">(optional)</span></label><textarea id="cashRequestNote" rows="3"></textarea></div>
+      <div class="formerror" id="cashRequestError"></div>
+
+      <button class="btn request" id="sendCashRequestBtn" style="width:100%;margin-top:12px" onclick="sendCashRequest()">✓ Send Close to Admin</button>
+      <button class="btn secondary" style="width:100%;margin-top:8px" onclick="clearSelection()">Clear Selection</button>
+    </aside>
   </div>
 </div>
+
 
 
 
@@ -297,6 +510,10 @@ const $=id=>document.getElementById(id);
 
 let allInvoices=[];
 let selectedGroups=new Set();
+let mainPage=1;
+const MAIN_PAGE_SIZE=20;
+let closePage=1;
+const CLOSE_PAGE_SIZE=20;
 let invoiceStates={};
 let lockedInvoices={};
 let invoiceDetailCache={};
@@ -567,42 +784,32 @@ function buildGroups(){
 }
 
 function populateFilters(){
-  const sales=[...new Set(
-    groups.map(g=>g.salesman).filter(v=>v&&v!=="-")
-  )].sort();
-
   const locs=[...new Set(
     groups.map(g=>g.locationName).filter(v=>v&&v!=="-")
   )].sort();
 
-  const s=$("salesmanFilter");
   const l=$("locationFilter");
-  const sv=s.value;
   const lv=l.value;
-
-  s.innerHTML='<option value="">All Salesmen</option>'+
-    sales.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
 
   l.innerHTML='<option value="">All Locations</option>'+
     locs.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
 
-  if(sales.includes(sv)) s.value=sv;
-  if(locs.includes(lv)) l.value=lv;
+  if(locs.includes(lv))l.value=lv;
 }
 
 function applyFilters(){
   const f=$("dateFrom").value;
   const t=$("dateTo").value;
-  const s=$("salesmanFilter").value;
   const l=$("locationFilter").value;
 
   filteredGroups=groups.filter(g=>
     (!f||g.saleDate>=f) &&
     (!t||g.saleDate<=t) &&
-    (!s||g.salesman===s) &&
     (!l||g.locationName===l)
   );
 
+  const pageCount=Math.max(1,Math.ceil(filteredGroups.length/MAIN_PAGE_SIZE));
+  if(mainPage>pageCount)mainPage=pageCount;
   renderGroups();
 }
 
@@ -642,31 +849,68 @@ function statusClass(text){
   return "available";
 }
 
+function renderMainPagination(){
+  const pages=Math.max(1,Math.ceil(filteredGroups.length/MAIN_PAGE_SIZE));
+  const wrap=$("mainPagination");
+  if(!wrap)return;
+
+  const buttons=[];
+  buttons.push(`<button class="page-btn" ${mainPage<=1?"disabled":""} onclick="setMainPage(${mainPage-1})">‹</button>`);
+
+  for(let p=1;p<=pages;p++){
+    if(p===1||p===pages||Math.abs(p-mainPage)<=1){
+      buttons.push(`<button class="page-btn ${p===mainPage?"active":""}" onclick="setMainPage(${p})">${p}</button>`);
+    }else if(!buttons[buttons.length-1]?.includes("…")){
+      buttons.push(`<span style="padding:0 2px;color:var(--muted)">…</span>`);
+    }
+  }
+
+  buttons.push(`<button class="page-btn" ${mainPage>=pages?"disabled":""} onclick="setMainPage(${mainPage+1})">›</button>`);
+  wrap.innerHTML=buttons.join("");
+}
+
+function setMainPage(page){
+  const pages=Math.max(1,Math.ceil(filteredGroups.length/MAIN_PAGE_SIZE));
+  mainPage=Math.min(Math.max(1,page),pages);
+  renderGroups();
+}
+
+function currentMainPageGroups(){
+  const start=(mainPage-1)*MAIN_PAGE_SIZE;
+  return filteredGroups.slice(start,start+MAIN_PAGE_SIZE);
+}
+
 function renderGroups(){
+  const pageRows=currentMainPageGroups();
+  const startRow=filteredGroups.length?(mainPage-1)*MAIN_PAGE_SIZE+1:0;
+  const endRow=Math.min(mainPage*MAIN_PAGE_SIZE,filteredGroups.length);
+
   $("rowCount").textContent=
-    `${filteredGroups.length} cash invoice${filteredGroups.length===1?"":"s"}`;
+    filteredGroups.length
+      ? `${startRow}-${endRow} of ${filteredGroups.length} cash invoices`
+      : "0 cash invoices";
 
   $("cardGroups").textContent=filteredGroups.length;
 
   const totalUsd=filteredGroups.reduce((x,g)=>x+g.cashUSD,0);
   const totalKhr=filteredGroups.reduce((x,g)=>x+g.cashKHR,0);
   const allComplete=filteredGroups.every(g=>g.rateComplete);
-  const dailyUsd=filteredGroups.reduce(
-    (x,g)=>x+(g.dailyCashUSD==null?0:g.dailyCashUSD),0
-  );
+  const dailyUsd=filteredGroups.reduce((x,g)=>x+(g.dailyCashUSD==null?0:g.dailyCashUSD),0);
 
   $("cardUsd").textContent=usd(totalUsd);
   $("cardKhr").textContent=khr(totalKhr);
   $("cardDailyUsd").textContent=allComplete?usd(dailyUsd):"Rate Missing";
   updateSelectedSummary();
+  renderMainPagination();
 
-  if(!filteredGroups.length){
+  if(!pageRows.length){
     $("summaryBody").innerHTML=
-      '<tr><td colspan="12" class="empty">No Daily Cash groups found.</td></tr>';
+      '<tr><td colspan="11" class="empty">No Daily Cash invoices found.</td></tr>';
+    if($("checkAllPage"))$("checkAllPage").checked=false;
     return;
   }
 
-  $("summaryBody").innerHTML=filteredGroups.map(g=>{
+  $("summaryBody").innerHTML=pageRows.map(g=>{
     const available=groupAvailableInvoices(g);
     const groupStatus=groupRequestStatus(g);
     const canRequest=available.length>0;
@@ -677,11 +921,10 @@ function renderGroups(){
         <input class="select-box" type="checkbox"
           ${selectedGroups.has(g.key)?"checked":""}
           ${canRequest?"":"disabled"}
-          onchange='toggleGroupSelection(${JSON.stringify(g.key)},this.checked)'>
+          onchange='toggleGroupSelection(${JSON.stringify(g.key)},this.checked,this)'>
       </td>
       <td><strong>${esc(g.saleDate)}</strong></td>
       <td><strong>${esc(g.invoices?.[0]?.invoiceNo||"-")}</strong></td>
-      <td>${esc(g.salesman)}</td>
       <td><strong>${esc(g.locationName)}</strong></td>
       <td>${esc(g.invoices?.[0]?.customer||"-")}</td>
       <td class="money">${usd(g.cashUSD)}</td>
@@ -689,28 +932,29 @@ function renderGroups(){
       <td class="money ${g.rateComplete?"":"warn"}">
         ${g.cashKHR ? (g.rateComplete?rate(g.avgRate):"Missing Rate") : "-"}
       </td>
-      <td class="money daily-key">
-        ${g.dailyCashUSD==null?"—":usd(g.dailyCashUSD)}
-      </td>
+      <td class="money daily-key">${g.dailyCashUSD==null?"—":usd(g.dailyCashUSD)}</td>
+      <td><span class="status-pill ${statusClass(groupStatus)}">${esc(groupStatus)}</span></td>
       <td>
-        <span class="status-pill ${statusClass(groupStatus)}">${esc(groupStatus)}</span>
-        ${canRequest&&available.length<g.invoiceCount?`<div style="font-size:10px;color:var(--muted);margin-top:4px">${available.length} new invoice${available.length===1?"":"s"} available</div>`:""}
-      </td>
-      <td>
-        <button class="btn primary" onclick='openPreview(${JSON.stringify(g.key)})'>Preview</button>
-        ${canRequest
-          ? `<button class="btn request" onclick='openSingleRequest(${JSON.stringify(g.key)})'>Request ${available.length<g.invoiceCount?"Available":""}</button>`
-          : `<button class="btn request" disabled>${groupStatus}</button>`}
+        <div class="main-table-actions">
+          <button class="btn primary" onclick='openPreview(${JSON.stringify(g.key)})'>Preview</button>
+          ${canRequest
+            ? `<button class="btn request" onclick='openSingleRequest(${JSON.stringify(g.key)})'>Request</button>`
+            : `<button class="btn request" disabled>${groupStatus}</button>`}
+        </div>
       </td>
     </tr>`;
   }).join("");
+
+  const eligible=pageRows.filter(g=>groupAvailableInvoices(g).length>0);
+  const allChecked=eligible.length>0 && eligible.every(g=>selectedGroups.has(g.key));
+  if($("checkAllPage"))$("checkAllPage").checked=allChecked;
 }
 
 function clearFilters(){
   $("dateFrom").value="";
   $("dateTo").value="";
-  $("salesmanFilter").value="";
   $("locationFilter").value="";
+  mainPage=1;
   applyFilters();
 }
 
@@ -736,8 +980,8 @@ function updateSelectedSummary(){
   $("selectedCashKHR").textContent=khr(cashKHR);
 
   const btn=$("batchRequestBtn");
-  btn.disabled=picked.length<2;
-  btn.textContent=`Close Selected (${picked.length})`;
+  btn.disabled=invoiceCount===0;
+  btn.textContent=`Close Selected (${invoiceCount})`;
 
   const summaryBtn=$("dailyCashSummaryBtn");
   if(summaryBtn){
@@ -746,14 +990,83 @@ function updateSelectedSummary(){
   }
 }
 
-function toggleGroupSelection(key,checked){
-  if(checked)selectedGroups.add(key);
-  else selectedGroups.delete(key);
+function selectionSignature(g){
+  return [
+    String(g?.saleDate||""),
+    String(g?.locationCode||g?.locationName||"").trim().toLowerCase(),
+    String(g?.salesman||"").trim().toLowerCase()
+  ].join("|||");
+}
+
+function currentSelectionSignature(){
+  const first=selectedGroupObjects()[0];
+  return first?selectionSignature(first):"";
+}
+
+function canJoinCurrentSelection(g){
+  const sig=currentSelectionSignature();
+  return !sig || selectionSignature(g)===sig;
+}
+
+function toggleGroupSelection(key,checked,el){
+  const g=groups.find(x=>x.key===key);
+  if(!g)return;
+
+  if(checked){
+    if(!groupAvailableInvoices(g).length){
+      if(el)el.checked=false;
+      return;
+    }
+
+    if(!canJoinCurrentSelection(g)){
+      if(el)el.checked=false;
+      alert("Batch selection must use the same Sale Date, same Location, and same Salesman.");
+      return;
+    }
+
+    selectedGroups.add(key);
+  }else{
+    selectedGroups.delete(key);
+  }
+
   updateSelectedSummary();
+  renderGroups();
+}
+
+function toggleCheckAllPage(checked){
+  const page=currentMainPageGroups();
+  const eligible=page.filter(g=>groupAvailableInvoices(g).length>0);
+
+  if(!checked){
+    eligible.forEach(g=>selectedGroups.delete(g.key));
+    updateSelectedSummary();
+    renderGroups();
+    return;
+  }
+
+  let sig=currentSelectionSignature();
+
+  if(!sig){
+    const first=eligible[0];
+    if(!first){
+      renderGroups();
+      return;
+    }
+    sig=selectionSignature(first);
+  }
+
+  eligible
+    .filter(g=>selectionSignature(g)===sig)
+    .forEach(g=>selectedGroups.add(g.key));
+
+  updateSelectedSummary();
+  renderGroups();
 }
 
 function clearSelection(){
   selectedGroups.clear();
+  requestGroups=[];
+  if($("cashRequestOverlay"))$("cashRequestOverlay").classList.add("hidden");
   renderGroups();
 }
 
@@ -796,6 +1109,12 @@ function openSingleRequest(key){
 function openBatchRequest(){
   const picked=selectedGroupObjects().filter(g=>groupAvailableInvoices(g).length>0);
   if(!picked.length)return alert("Please select Cash invoices first.");
+
+  const sigs=[...new Set(picked.map(selectionSignature))];
+  if(sigs.length!==1){
+    return alert("Selected invoices must have the same Sale Date, same Location, and same Salesman.");
+  }
+
   openCashRequest(picked);
 }
 
@@ -841,6 +1160,11 @@ function recalculateClose(){
   $("closeDifference").textContent=(diff>=0?"+":"-")+usd(Math.abs(diff));
   $("closeMatchStatus").textContent=matched?"MATCHED ✓":"NOT MATCHED";
   $("closeMatchStatus").style.color=matched?"#198754":"#c93c46";
+  const resultCard=$("closeResultCard");
+  if(resultCard){
+    resultCard.classList.toggle("good",matched);
+    resultCard.classList.toggle("bad",!matched);
+  }
 
   if($("closeMethod").value==="Deposit to Company Bank"){
     const depRate=num($("depositRate").value);
@@ -855,7 +1179,137 @@ function recalculateClose(){
   return {expected,actual,diff,matched};
 }
 
+function closeSelectedRows(){
+  return requestGroups.flatMap(g=>
+    (g.invoices||[]).map(inv=>({
+      inv,
+      g,
+      key:g.key
+    }))
+  );
+}
+
+function renderClosePagination(){
+  const rows=closeSelectedRows();
+  const pages=Math.max(1,Math.ceil(rows.length/CLOSE_PAGE_SIZE));
+  if(closePage>pages)closePage=pages;
+
+  const wrap=$("closePagination");
+  if(!wrap)return;
+
+  const buttons=[];
+  buttons.push(`<button class="page-btn" ${closePage<=1?"disabled":""} onclick="setClosePage(${closePage-1})">‹</button>`);
+
+  for(let p=1;p<=pages;p++){
+    if(p===1||p===pages||Math.abs(p-closePage)<=1){
+      buttons.push(`<button class="page-btn ${p===closePage?"active":""}" onclick="setClosePage(${p})">${p}</button>`);
+    }else if(!buttons[buttons.length-1]?.includes("…")){
+      buttons.push(`<span style="padding:0 2px;color:var(--muted)">…</span>`);
+    }
+  }
+
+  buttons.push(`<button class="page-btn" ${closePage>=pages?"disabled":""} onclick="setClosePage(${closePage+1})">›</button>`);
+  wrap.innerHTML=buttons.join("");
+}
+
+function setClosePage(page){
+  const rows=closeSelectedRows();
+  const pages=Math.max(1,Math.ceil(rows.length/CLOSE_PAGE_SIZE));
+  closePage=Math.min(Math.max(1,page),pages);
+  renderCloseSelectedPage();
+}
+
+function renderCloseSelectedPage(){
+  const rows=closeSelectedRows();
+  const start=(closePage-1)*CLOSE_PAGE_SIZE;
+  const page=rows.slice(start,start+CLOSE_PAGE_SIZE);
+
+  $("closeSelectedCount").textContent=`${rows.length} selected`;
+  $("closePageInfo").textContent=rows.length
+    ? `${start+1}-${Math.min(start+CLOSE_PAGE_SIZE,rows.length)} of ${rows.length} selected invoices`
+    : "0 selected invoices";
+
+  $("cashRequestList").innerHTML=page.map((x,i)=>{
+    const inv=x.inv;
+    const g=x.g;
+    const c=String(inv.currency||"USD").toUpperCase();
+    const expected=expectedUsdForInvoice(inv);
+
+    return `<tr>
+      <td class="center">
+        <input class="select-box" type="checkbox" checked onchange='removeFromCloseSelection(${JSON.stringify(x.key)},this.checked)'>
+      </td>
+      <td>${start+i+1}</td>
+      <td><strong>${esc(inv.invoiceNo||"-")}</strong></td>
+      <td>${esc(inv.customer||"-")}</td>
+      <td>${esc(g.saleDate||"-")}</td>
+      <td>${esc(g.locationName||"-")}</td>
+      <td class="money">${c==="USD"?usd(inv.amountPaid):usd(0)}</td>
+      <td class="money">${c==="KHR"?khr(inv.amountPaid):khr(0)}</td>
+      <td class="money">${Number.isFinite(expected)?usd(expected):"—"}</td>
+      <td><span class="status-pill ${statusClass(invoiceRequestStatus(inv))}">${esc(invoiceRequestStatus(inv))}</span></td>
+    </tr>`;
+  }).join("");
+
+  const currentPageKeys=new Set(page.map(x=>x.key));
+  const allChecked=page.length>0 && page.every(x=>selectedGroups.has(x.key));
+  if($("closeCheckAllPage"))$("closeCheckAllPage").checked=allChecked;
+
+  const expected=expectedCloseUSD();
+  $("closePageTotal").textContent=`Selected Total: ${usd(expected)}`;
+
+  renderClosePagination();
+  recalculateClose();
+}
+
+function removeFromCloseSelection(key,checked){
+  if(checked)return;
+
+  selectedGroups.delete(key);
+  requestGroups=requestGroups.filter(g=>g.key!==key);
+
+  if(!requestGroups.length){
+    closeCashRequest();
+    renderGroups();
+    return;
+  }
+
+  renderCloseSelectedPage();
+  renderGroups();
+  updateSelectedSummary();
+}
+
+function toggleCloseCheckAllPage(checked){
+  if(checked){
+    // Everything shown in this close workspace is already selected.
+    renderCloseSelectedPage();
+    return;
+  }
+
+  const rows=closeSelectedRows();
+  const start=(closePage-1)*CLOSE_PAGE_SIZE;
+  const page=rows.slice(start,start+CLOSE_PAGE_SIZE);
+
+  page.forEach(x=>selectedGroups.delete(x.key));
+  requestGroups=requestGroups.filter(g=>selectedGroups.has(g.key));
+
+  if(!requestGroups.length){
+    closeCashRequest();
+    renderGroups();
+    return;
+  }
+
+  renderCloseSelectedPage();
+  renderGroups();
+  updateSelectedSummary();
+}
+
 function openCashRequest(picked){
+  const sigs=[...new Set(picked.map(selectionSignature))];
+  if(sigs.length!==1){
+    return alert("Selected invoices must have the same Sale Date, same Location, and same Salesman.");
+  }
+
   requestGroups=picked
     .map(g=>({...g,invoices:groupAvailableInvoices(g)}))
     .filter(g=>g.invoices.length>0);
@@ -868,24 +1322,12 @@ function openCashRequest(picked){
   );
   if(missingRate)return alert("One or more KHR invoices are missing Exchange Rate.");
 
-  const salesmen=[...new Set(invoices.map(x=>String(x.salesperson||"").trim()).filter(Boolean))];
-  if(salesmen.length>1)return alert("Please close one Salesman at a time.");
+  const first=requestGroups[0];
+  closePage=1;
 
   $("cashRequestTitle").textContent=`Close Daily Cash (${invoices.length} invoice${invoices.length===1?"":"s"})`;
-  $("cashRequestInfo").textContent="Count the real physical USD and KHR. The batch can close only when the cash matches the selected invoice value.";
-
-  $("cashRequestList").innerHTML=requestGroups.map(g=>{
-    const inv=g.invoices?.[0]||{};
-    const c=String(inv.currency||"USD").toUpperCase();
-
-    return `<div class="selected-item">
-      <span>
-        <strong>${esc(inv.invoiceNo||"-")} · ${esc(inv.customer||"-")}</strong><br>
-        ${esc(g.saleDate)} · ${esc(g.salesman)} · ${esc(g.locationName)}
-      </span>
-      <span style="text-align:right"><strong>${c==="KHR"?khr(inv.amountPaid):usd(inv.amountPaid)}</strong></span>
-    </div>`;
-  }).join("");
+  $("cashRequestInfo").textContent="Review selected invoices and count the real physical USD/KHR before sending to Admin.";
+  $("closeGroupRule").textContent=`${first.saleDate} · ${first.locationName} · Same Salesman (auto verified)`;
 
   $("closeMethod").value="Hand Cash to Accountant";
   $("actualCashUSD").value="0";
@@ -900,6 +1342,7 @@ function openCashRequest(picked){
   $("cashRequestError").classList.remove("show");
 
   toggleCloseMethod();
+  renderCloseSelectedPage();
   $("cashRequestOverlay").classList.remove("hidden");
 }
 
@@ -1212,7 +1655,7 @@ async function loadInvoices(manual=false,silent=false){
     }else{
       showError(e.message||"Could not load sales invoice cash.");
       $("summaryBody").innerHTML=
-        '<tr><td colspan="12" class="empty">Could not load Daily Cash Collection.</td></tr>';
+        '<tr><td colspan="11" class="empty">Could not load Daily Cash Collection.</td></tr>';
       $("syncStatus").textContent="Load failed";
     }
   }finally{
