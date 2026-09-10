@@ -10,7 +10,7 @@
 <script>
 (async function(){
   try{
-    const response=await fetch('legacy-google-v4.7.html?v=20260910-1',{cache:'no-store'});
+    const response=await fetch('legacy-google-v4.7.html?v=20260910-2',{cache:'no-store'});
     if(!response.ok)throw new Error('Could not load Daily Cash source.');
     let html=await response.text();
 
@@ -20,7 +20,7 @@
     html=html.slice(0,headClose)+adapter+'\n'+html.slice(headClose);
 
     const marker='(async function init(){';
-    const replacement=`api=window.BBDailyCashAdapter.api;\napiPost=window.BBDailyCashAdapter.apiPost;\nloadLocationMap=async function(){\n  const map=await window.BBDailyCashAdapter.locationMap();\n  locationMap=map;\n  return map;\n};\nsalesmanSessionToken='SUPABASE_AUTH';\n\n(async function init(){\n  try{\n    await window.BBDailyCashAdapter.ensureSession();\n    const profile=await window.BBDailyCashAdapter.accessProfile();\n    const label=profile?.staff?.staffName||profile?.user?.email||'Signed in';\n    const pill=document.querySelector('.topbar .pill');\n    if(pill)pill.textContent='Supabase · '+label;\n  }catch(error){\n    showError(error?.message||'Daily Cash Collection access denied.');\n    if($("syncStatus"))$("syncStatus").textContent='Supabase sign-in required';\n    return;\n  }`;
+    const replacement=`api=window.BBDailyCashAdapter.api;\napiPost=window.BBDailyCashAdapter.apiPost;\nloadLocationMap=async function(){\n  const map=await window.BBDailyCashAdapter.locationMap();\n  locationMap=map;\n  return map;\n};\n// Supabase multi-user hardening: never reuse another account's legacy browser cache.\nreadCache=function(){return null;};\nsaveCache=function(){};\nshowCache=function(){return false;};\nreadCloseStateCache=function(){return {};};\nsaveCloseStateCache=function(){};\nsalesmanSessionToken='SUPABASE_AUTH';\n\n(async function init(){\n  try{\n    await window.BBDailyCashAdapter.ensureSession();\n    const profile=await window.BBDailyCashAdapter.accessProfile();\n    try{\n      localStorage.removeItem('BB_DAILY_CASH_COLLECTION_CACHE_V1');\n      localStorage.removeItem('BB_DAILY_CASH_CLOSE_STATE_V1');\n    }catch(_){}\n    const label=profile?.staff?.staffName||profile?.user?.email||'Signed in';\n    const pill=document.querySelector('.topbar .pill');\n    if(pill)pill.textContent='Supabase · '+label;\n  }catch(error){\n    showError(error?.message||'Daily Cash Collection access denied.');\n    if($("syncStatus"))$("syncStatus").textContent='Supabase sign-in required';\n    return;\n  }`;
     if(!html.includes(marker))throw new Error('Daily Cash initialization marker was not found.');
     html=html.replace(marker,replacement);
     html=html.replace('<title>BIG BROTHER — Daily Cash Collection V4.4 Responsive Close Workspace</title>','<title>BIG BROTHER — Daily Cash Collection Supabase</title>');
