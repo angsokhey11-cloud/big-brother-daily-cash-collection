@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>BIG BROTHER — Daily Cash Collection Mobile</title>
+<style>html,body{margin:0;min-height:100%;background:#f4f7fb;font-family:Arial,sans-serif}.bb-loader{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px}.bb-card{background:#fff;border:1px solid #d9e2ef;border-radius:14px;padding:20px 24px;box-shadow:0 8px 30px #173a6615;color:#17457a;font-weight:800;text-align:center}.bb-sub{margin-top:6px;color:#6b7280;font-size:11px;font-weight:600}</style>
+</head>
+<body>
+<div class="bb-loader"><div class="bb-card">Loading Daily Cash Collection…<div class="bb-sub">Mobile · All Locations · Secure Supabase</div></div></div>
+<script>
+(async function(){
+  try{
+    const response=await fetch('legacy-google-v4.7.html?v=20260915-1',{cache:'no-store'});
+    if(!response.ok)throw new Error('Could not load Daily Cash source.');
+    let html=await response.text();
+
+    const headAdd='<link rel="stylesheet" href="mobile-daily-cash.css?v=20260915-1">\n<scr'+'ipt src="supabase-daily-cash-mobile-adapter.js?v=20260915-1"></scr'+'ipt>';
+    const headClose=html.toLowerCase().indexOf('</head>');
+    if(headClose<0)throw new Error('Daily Cash source is missing </head>.');
+    html=html.slice(0,headClose)+headAdd+'\n'+html.slice(headClose);
+
+    const marker='(async function init(){';
+    const replacement=`api=window.BBDailyCashMobileAdapter.api;\napiPost=window.BBDailyCashMobileAdapter.apiPost;\nloadLocationMap=async function(){\n  const map=await window.BBDailyCashMobileAdapter.locationMap();\n  locationMap=map;\n  return map;\n};\nreadCache=function(){return null;};\nsaveCache=function(){};\nshowCache=function(){return false;};\nreadCloseStateCache=function(){return {};};\nsaveCloseStateCache=function(){};\nsalesmanSessionToken='SUPABASE_AUTH';\n\n(async function init(){\n  try{\n    await window.BBDailyCashMobileAdapter.ensureSession();\n    const profile=await window.BBDailyCashMobileAdapter.accessProfile();\n    try{\n      localStorage.removeItem('BB_DAILY_CASH_COLLECTION_CACHE_V1');\n      localStorage.removeItem('BB_DAILY_CASH_CLOSE_STATE_V1');\n    }catch(_){}\n    const label=profile?.staff?.staffName||profile?.user?.email||'Signed in';\n    const pill=document.querySelector('.topbar .pill');\n    if(pill)pill.textContent='All Locations · '+label;\n  }catch(error){\n    showError(error?.message||'Daily Cash Collection access denied.');\n    if($("syncStatus"))$("syncStatus").textContent='Permission required';\n    return;\n  }`;
+    if(!html.includes(marker))throw new Error('Daily Cash initialization marker was not found.');
+    html=html.replace(marker,replacement);
+
+    html=html.replace('<title>BIG BROTHER — Daily Cash Collection V4.4 Responsive Close Workspace</title>','<title>BIG BROTHER — Daily Cash Collection Mobile</title>');
+    html=html.replace('Invoice History · Cash Sales Only','All Locations · Cash Sales Only');
+    html=html.replace('Source: Invoice History. OPEN and PENDING Cash invoices are shown. Close batches can include only the same Sale Date, Location, and Salesman. Maximum 20 rows are shown per page.','All-location Daily Cash. Function permission controls access; staff location assignment is not used. OPEN and PENDING Cash invoices are shown. Close batches still require the same Sale Date, Location, and Salesman.');
+
+    const bodyClose=html.toLowerCase().lastIndexOf('</body>');
+    if(bodyClose<0)throw new Error('Daily Cash source is missing </body>.');
+    html=html.slice(0,bodyClose)+'<scr'+'ipt src="mobile-daily-cash-ui.js?v=20260915-1"></scr'+'ipt>\n'+html.slice(bodyClose);
+
+    document.open();document.write(html);document.close();
+  }catch(error){
+    console.error(error);
+    document.body.innerHTML='<div class="bb-loader"><div class="bb-card">Could not open Daily Cash Collection<div class="bb-sub">'+String(error?.message||error)+'</div></div></div>';
+  }
+})();
+</script>
+</body>
+</html>
