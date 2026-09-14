@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BIG BROTHER — Your Collection</title>
+<style>html,body{margin:0;min-height:100%;background:#f4f7fb;font-family:Arial,sans-serif}.bb-loader{min-height:100vh;display:flex;align-items:center;justify-content:center}.bb-card{background:#fff;border:1px solid #d9e2ef;border-radius:14px;padding:22px 28px;box-shadow:0 8px 30px #173a6615;color:#17457a;font-weight:800}.bb-sub{margin-top:6px;color:#6b7280;font-size:12px;font-weight:600}</style>
+</head>
+<body>
+<div class="bb-loader"><div class="bb-card">Loading BIG BROTHER Your Collection…<div class="bb-sub">Your Staff ID + assigned locations only</div></div></div>
+<script>
+(async function(){
+  try{
+    const response=await fetch('legacy-google-v4.7.html?v=20260914-1',{cache:'no-store'});
+    if(!response.ok)throw new Error('Could not load Your Collection source.');
+    let html=await response.text();
+
+    const adapter='<scr'+'ipt src="supabase-your-collection-adapter.js?v=20260914-1"></scr'+'ipt>';
+    const headClose=html.toLowerCase().indexOf('</head>');
+    if(headClose<0)throw new Error('Your Collection source is missing </head>.');
+    html=html.slice(0,headClose)+adapter+'\n'+html.slice(headClose);
+
+    const marker='(async function init(){';
+    const replacement=`api=window.BBYourCollectionAdapter.api;\napiPost=window.BBYourCollectionAdapter.apiPost;\nloadLocationMap=async function(){\n  const map=await window.BBYourCollectionAdapter.locationMap();\n  locationMap=map;\n  return map;\n};\n// Scoped multi-user mode: never reuse another account's browser cache.\nreadCache=function(){return null;};\nsaveCache=function(){};\nshowCache=function(){return false;};\nreadCloseStateCache=function(){return {};};\nsaveCloseStateCache=function(){};\nsalesmanSessionToken='SUPABASE_AUTH';\n\n(async function init(){\n  try{\n    await window.BBYourCollectionAdapter.ensureSession();\n    const profile=await window.BBYourCollectionAdapter.accessProfile();\n    try{\n      localStorage.removeItem('BB_DAILY_CASH_COLLECTION_CACHE_V1');\n      localStorage.removeItem('BB_DAILY_CASH_CLOSE_STATE_V1');\n    }catch(_){}\n    const label=profile?.staff?.staffName||profile?.user?.email||'Signed in';\n    const pill=document.querySelector('.topbar .pill');\n    if(pill)pill.textContent='Your Collection · '+label;\n  }catch(error){\n    showError(error?.message||'Your Collection access denied.');\n    if($("syncStatus"))$("syncStatus").textContent='Supabase sign-in required';\n    return;\n  }`;
+    if(!html.includes(marker))throw new Error('Your Collection initialization marker was not found.');
+    html=html.replace(marker,replacement);
+
+    html=html.replace('<title>BIG BROTHER — Daily Cash Collection V4.4 Responsive Close Workspace</title>','<title>BIG BROTHER — Your Collection</title>');
+    html=html.replace('<h1>Daily Cash Collection</h1>','<h1>💵 Your Collection</h1>');
+    html=html.replace('Cash invoices from Invoice History. Select invoices, count the real USD/KHR collected, and close the batch only when the cash matches.','Your Cash invoices only. Data is limited to your Staff ID and assigned locations. Count the real USD/KHR collected and send the close to Admin when the cash matches.');
+    html=html.replace('Invoice History · Cash Sales Only','Your Staff ID · Assigned Locations Only');
+    html=html.replace('Source: Invoice History. OPEN and PENDING Cash invoices are shown. Close batches can include only the same Sale Date, Location, and Salesman. Maximum 20 rows are shown per page.','Source: your own Cash invoices from assigned locations. OPEN and PENDING collections are shown. Close batches can include only the same Sale Date and Location. Maximum 20 rows are shown per page.');
+
+    document.open();document.write(html);document.close();
+  }catch(error){
+    console.error(error);
+    document.body.innerHTML='<div class="bb-loader"><div class="bb-card">Could not open Your Collection<div class="bb-sub">'+String(error?.message||error)+'</div></div></div>';
+  }
+})();
+</script>
+</body>
+</html>
