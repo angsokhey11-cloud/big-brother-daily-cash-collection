@@ -6,7 +6,7 @@
 <style>html,body{margin:0;min-height:100%;background:#f4f7fb;font-family:Arial,sans-serif}.bb-loader{min-height:100vh;display:flex;align-items:center;justify-content:center}.bb-card{background:#fff;border:1px solid #d9e2ef;border-radius:14px;padding:22px 28px;box-shadow:0 8px 30px #173a6615;color:#17457a;font-weight:800}.bb-sub{margin-top:6px;color:#6b7280;font-size:12px;font-weight:600}</style>
 </head>
 <body>
-<div class="bb-loader"><div class="bb-card">Loading BIG BROTHER Your Collection…<div class="bb-sub">Your Staff ID + assigned locations only</div></div></div>
+<div class="bb-loader"><div class="bb-card">Loading BIG BROTHER Your Collection…<div class="bb-sub">Current Permanent Salesman locations only</div></div></div>
 <script>
 (async function(){
   try{
@@ -14,7 +14,7 @@
     if(!response.ok)throw new Error('Could not load Your Collection source.');
     let html=await response.text();
 
-    const adapter='<scr'+'ipt src="supabase-your-collection-adapter.js?v=20260914-1"></scr'+'ipt>';
+    const adapter='<scr'+'ipt src="supabase-your-collection-adapter.js?v=20260921-owner1"></scr'+'ipt>';
     const headClose=html.toLowerCase().indexOf('</head>');
     if(headClose<0)throw new Error('Your Collection source is missing </head>.');
     html=html.slice(0,headClose)+adapter+'\n'+html.slice(headClose);
@@ -26,9 +26,9 @@
 
     html=html.replace('<title>BIG BROTHER — Daily Cash Collection V4.4 Responsive Close Workspace</title>','<title>BIG BROTHER — Your Collection</title>');
     html=html.replace('<h1>Daily Cash Collection</h1>','<h1>💵 Your Collection</h1>');
-    html=html.replace('Cash invoices from Invoice History. Select invoices, count the real USD/KHR collected, and close the batch only when the cash matches.','Your Cash invoices only. Data is limited to your Staff ID and assigned locations. Count the real USD/KHR collected and send the close to Admin when the cash matches.');
-    html=html.replace('Invoice History · Cash Sales Only','Your Staff ID · Assigned Locations Only');
-    html=html.replace('Source: Invoice History. OPEN and PENDING Cash invoices are shown. Close batches can include only the same Sale Date, Location, and Salesman. Maximum 20 rows are shown per page.','Source: your own Cash invoices from assigned locations. OPEN and PENDING collections are shown. Close batches can include only the same Sale Date and Location. Maximum 20 rows are shown per page.');
+    html=html.replace('Cash invoices from Invoice History. Select invoices, count the real USD/KHR collected, and close the batch only when the cash matches.','Your Cash invoices only. Data follows the current Permanent Salesman assigned to each Location. Count the real USD/KHR collected and send the close to Admin when the cash matches.');
+    html=html.replace('Invoice History · Cash Sales Only','Permanent Salesman · Location Responsibility');
+    html=html.replace('Source: Invoice History. OPEN and PENDING Cash invoices are shown. Close batches can include only the same Sale Date, Location, and Salesman. Maximum 20 rows are shown per page.','Source: Cash invoices from your current Permanent Salesman locations. OPEN and PENDING collections are shown. Close batches can include only the same Sale Date and Location. Maximum 20 rows are shown per page.');
 
     document.open();document.write(html);document.close();
   }catch(error){
