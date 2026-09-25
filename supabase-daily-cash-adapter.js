@@ -74,6 +74,9 @@
       case 'invoiceList':
         return rpc('bb_dcc_invoice_list');
       case 'invoiceDetail':
+        if(String(params.invoiceId||'').trim()){
+          return rpc('bb_dcc_invoice_detail_by_id',{p_invoice_id:String(params.invoiceId||'')});
+        }
         return rpc('bb_dcc_invoice_detail',{p_invoice_no:String(params.invoiceNo||'')});
       case 'invoiceHistoryRevision': {
         const revision=await rpc('bb_dcc_revision');
