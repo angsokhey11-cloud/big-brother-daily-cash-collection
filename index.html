@@ -10,11 +10,11 @@
 <script>
 (async function(){
   try{
-    const response=await fetch('legacy-google-v4.7.html?v=20260910-2',{cache:'no-store'});
+    const response=await fetch('legacy-google-v4.7.html?v=20260925-1',{cache:'no-store'});
     if(!response.ok)throw new Error('Could not load Daily Cash source.');
     let html=await response.text();
 
-    const adapter='<scr'+'ipt src="supabase-daily-cash-adapter.js?v=20260910-1"></scr'+'ipt>';
+    const adapter='<scr'+'ipt src="supabase-daily-cash-adapter.js?v=20260925-1"></scr'+'ipt>';
     const headClose=html.toLowerCase().indexOf('</head>');
     if(headClose<0)throw new Error('Daily Cash source is missing </head>.');
     html=html.slice(0,headClose)+adapter+'\n'+html.slice(headClose);
