@@ -1551,7 +1551,7 @@ function openDailyCashSummary(){
       <td>${esc(c)}</td>
       <td class="money">${c==="KHR"?khr(inv.amountPaid):usd(inv.amountPaid)}</td>
       <td><span class="status-pill ${statusClass(st)}">${esc(st)}</span></td>
-      <td><button class="btn primary" onclick='showDailyCashInvoiceDetail(${JSON.stringify(inv.invoiceNo)})'>View Invoice</button></td>
+      <td><button class="btn primary" onclick='showDailyCashInvoiceDetail(${JSON.stringify(inv.invoiceId)},${JSON.stringify(inv.invoiceNo)})'>View Invoice</button></td>
     </tr>`;
   }).join("");
 
@@ -1564,14 +1564,14 @@ function closeDailyCashSummary(){
   $("dailyCashInvoiceDetailPanel").classList.add("hidden");
 }
 
-async function showDailyCashInvoiceDetail(invoiceNo){
+async function showDailyCashInvoiceDetail(invoiceId,invoiceNo){
   const panel=$("dailyCashInvoiceDetailPanel");
   panel.classList.remove("hidden");
   $("dailyCashInvoiceDetailTitle").textContent=`Invoice ${invoiceNo}`;
   $("dailyCashInvoiceDetailContent").innerHTML='<div class="empty">Loading invoice detail…</div>';
 
   try{
-    const inv=await getCashInvoiceDetail(invoiceNo);
+    const inv=await getCashInvoiceDetail(invoiceId,invoiceNo);
     if(!inv)throw new Error("Invoice was not found.");
 
     const c=String(inv.currency||"USD").toUpperCase();
@@ -1732,12 +1732,14 @@ function startSmartSync(){
   syncTimer=setInterval(()=>smartSync(false),SYNC_INTERVAL_MS);
 }
 
-async function getCashInvoiceDetail(invoiceNo){
-  const key=String(invoiceNo||"").trim();
+async function getCashInvoiceDetail(invoiceId,invoiceNo){
+  const id=String(invoiceId||"").trim();
+  const no=String(invoiceNo||"").trim();
+  const key=id||no;
   if(!key)return null;
   if(invoiceDetailCache[key])return invoiceDetailCache[key];
 
-  const d=await api({action:"invoiceDetail",invoiceNo:key,_ts:Date.now()});
+  const d=await api({action:"invoiceDetail",invoiceId:id,invoiceNo:no,_ts:Date.now()});
   const inv=d?.invoice||null;
   if(inv)invoiceDetailCache[key]=inv;
   return inv;
@@ -1803,7 +1805,7 @@ async function openPreview(key){
     const cell=$(id);
     if(!cell)return;
     try{
-      const detail=await getCashInvoiceDetail(inv.invoiceNo);
+      const detail=await getCashInvoiceDetail(inv.invoiceId,inv.invoiceNo);
       cell.innerHTML=productSummaryHtml(detail?.items||[]);
     }catch(_){
       cell.innerHTML='<span class="warn">Could not load products</span>';
