@@ -268,6 +268,9 @@ tbody tr:hover{background:#f9fbfe}
 /* Khmer readability for collection tables and previews; existing layout retained. */
 html,body,input,select,textarea,td{font-family:Arial,Helvetica,'Noto Sans Khmer',sans-serif}
 .tablewrap tbody td,.preview-table td,.close-list-wrap td{font-family:Arial,'Noto Sans Khmer',sans-serif;line-height:1.7;color:#263d56}
+
+/* Explicit high-contrast Khmer name cells, matching All Receivable. */
+td.bb-khmer-name{font-family:'Noto Sans Khmer',Arial,sans-serif;font-size:14px;font-weight:600;color:#243a56;line-height:1.7}
 </style>
 </head>
 <body>
@@ -955,7 +958,7 @@ function renderGroups(){
       </td>
       <td><strong>${esc(g.saleDate)}</strong></td>
       <td><strong>${esc(g.invoices?.[0]?.invoiceNo||"-")}</strong></td>
-      <td>${esc(g.salesman||"-")}</td>
+      <td class="bb-khmer-name">${esc(g.salesman||"-")}</td>
       <td><strong>${esc(g.locationName)}</strong></td>
       <td>${esc(g.invoices?.[0]?.customer||"-")}</td>
       <td class="money">${usd(g.cashUSD)}</td>
@@ -1272,10 +1275,10 @@ function renderCloseSelectedPage(){
       </td>
       <td>${start+i+1}</td>
       <td><strong>${esc(inv.invoiceNo||"-")}</strong></td>
-      <td>${esc(inv.customer||"-")}</td>
-      <td>${esc(g.salesman||"-")}</td>
+      <td class="bb-khmer-name">${esc(inv.customer||"-")}</td>
+      <td class="bb-khmer-name">${esc(g.salesman||"-")}</td>
       <td>${esc(g.saleDate||"-")}</td>
-      <td>${esc(g.locationName||"-")}</td>
+      <td class="bb-khmer-name">${esc(g.locationName||"-")}</td>
       <td class="money">${c==="USD"?usd(inv.amountPaid):usd(0)}</td>
       <td class="money">${c==="KHR"?khr(inv.amountPaid):khr(0)}</td>
       <td class="money">${Number.isFinite(expected)?usd(expected):"—"}</td>
@@ -1551,9 +1554,9 @@ function openDailyCashSummary(){
     return `<tr>
       <td>${esc(inv.saleDate||String(inv.invoiceDate||"").slice(0,10))}</td>
       <td><strong>${esc(inv.invoiceNo)}</strong></td>
-      <td>${esc(inv.customer||"-")}</td>
+      <td class="bb-khmer-name">${esc(inv.customer||"-")}</td>
       <td>${esc(inv.salesperson||"-")}</td>
-      <td>${esc(inv.locationName||inv.locationCode||"-")}</td>
+      <td class="bb-khmer-name">${esc(inv.locationName||inv.locationCode||"-")}</td>
       <td>${esc(c)}</td>
       <td class="money">${c==="KHR"?khr(inv.amountPaid):usd(inv.amountPaid)}</td>
       <td><span class="status-pill ${statusClass(st)}">${esc(st)}</span></td>
@@ -1783,7 +1786,7 @@ async function openPreview(key){
 
     return `<tr data-invoice-no="${esc(inv.invoiceNo)}">
       <td><strong>${esc(inv.invoiceNo)}</strong></td>
-      <td>${esc(inv.customer)}</td>
+      <td class="bb-khmer-name">${esc(inv.customer)}</td>
       <td class="products-cell" id="products-${String(inv.invoiceId||inv.invoiceNo).replace(/[^a-zA-Z0-9_-]/g,"_")}"><span style="color:var(--muted)">Loading products…</span></td>
       <td>${esc(inv.paymentMethod||"-")}</td>
       <td>${esc(c)}</td>
