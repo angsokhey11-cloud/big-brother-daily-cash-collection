@@ -351,7 +351,7 @@ td.bb-khmer-name{font-family:'Noto Sans Khmer',Arial,sans-serif;font-size:14px;f
     </div>
 
     <div class="note">
-      Source: Invoice History. OPEN and PENDING Cash invoices are shown. Close batches can include only the same Sale Date, Location, and Salesman. Maximum 20 rows are shown per page.
+      Source: Invoice History. OPEN and PENDING Cash invoices are shown. Close batches can include different Sale Dates within the same Location and Salesman. Maximum 20 rows are shown per page.
     </div>
   </div>
 </div>
@@ -407,7 +407,7 @@ td.bb-khmer-name{font-family:'Noto Sans Khmer',Arial,sans-serif;font-size:14px;f
       </div>
 
       <div class="rulebar">
-        Batch rule: selected invoices must have the same Sale Date, same Location, and same Salesman.
+        Batch rule: selected invoices must have the same Location and Salesman (any Sale Date).
       </div>
 
       <div class="close-selectbar">
@@ -451,7 +451,7 @@ td.bb-khmer-name{font-family:'Noto Sans Khmer',Arial,sans-serif;font-size:14px;f
       <h3 class="close-right-title">Close Daily Cash</h3>
       <p class="close-right-sub">Count the real physical USD and KHR. Submit only when actual cash matches the selected invoice value.</p>
 
-      <div class="group-rule-note" id="closeGroupRule">Same Sale Date · Same Location · Same Salesman</div>
+      <div class="group-rule-note" id="closeGroupRule">Any Sale Date · Same Location · Same Salesman</div>
 
       <div class="field">
         <label>Close Method</label>
@@ -1025,8 +1025,9 @@ function updateSelectedSummary(){
 }
 
 function selectionSignature(g){
+  // Collection requests can contain invoices from different sales dates.
+  // Keep each close scoped to one location and one responsible salesman.
   return [
-    String(g?.saleDate||""),
     String(g?.locationCode||g?.locationName||"").trim().toLowerCase(),
     String(g?.salesman||"").trim().toLowerCase()
   ].join("|||");
@@ -1054,7 +1055,7 @@ function toggleGroupSelection(key,checked,el){
 
     if(!canJoinCurrentSelection(g)){
       if(el)el.checked=false;
-      alert("Batch selection must use the same Sale Date, same Location, and same Salesman.");
+      alert("Batch selection must use the same Location and Salesman (any Sale Date).");
       return;
     }
 
@@ -1146,7 +1147,7 @@ function openBatchRequest(){
 
   const sigs=[...new Set(picked.map(selectionSignature))];
   if(sigs.length!==1){
-    return alert("Selected invoices must have the same Sale Date, same Location, and same Salesman.");
+    return alert("Selected invoices must have the same Location and Salesman (any Sale Date).");
   }
 
   openCashRequest(picked);
@@ -1346,7 +1347,7 @@ function toggleCloseCheckAllPage(checked){
 function openCashRequest(picked){
   const sigs=[...new Set(picked.map(selectionSignature))];
   if(sigs.length!==1){
-    return alert("Selected invoices must have the same Sale Date, same Location, and same Salesman.");
+    return alert("Selected invoices must have the same Location and Salesman (any Sale Date).");
   }
 
   requestGroups=picked
@@ -1366,7 +1367,11 @@ function openCashRequest(picked){
 
   $("cashRequestTitle").textContent=`Close Daily Cash (${invoices.length} invoice${invoices.length===1?"":"s"})`;
   $("cashRequestInfo").textContent="Review selected invoices and count the real physical USD/KHR before sending to Admin.";
-  $("closeGroupRule").textContent=`${first.saleDate} · ${first.locationName} · Same Salesman (auto verified)`;
+  const dates=invoices.map(inv=>dateOnly(inv.invoiceDate)).filter(Boolean).sort();
+  const dateRange=dates.length
+    ? (dates[0]===dates[dates.length-1]?dates[0]:dates[0]+" → "+dates[dates.length-1])
+    : "Selected Sale Dates";
+  $("closeGroupRule").textContent=`${dateRange} · ${first.locationName} · Same Salesman (auto verified)`;
 
   $("closeMethod").value="Hand Cash to Accountant";
   $("actualCashUSD").value="0";
@@ -1816,7 +1821,8 @@ async function openPreview(key){
     try{
       const detail=await getCashInvoiceDetail(inv.invoiceId,inv.invoiceNo);
       cell.innerHTML=productSummaryHtml(detail?.items||[]);
-    }catch(_){
+    }catch(error){
+      console.warn("Cash Collection product detail:",inv.invoiceId||inv.invoiceNo,error?.message||error);
       cell.innerHTML='<span class="warn">Could not load products</span>';
     }
   }));
