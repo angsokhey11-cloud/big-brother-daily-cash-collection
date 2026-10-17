@@ -10,7 +10,7 @@
 <script>
 (async function(){
   try{
-    const response=await fetch('legacy-google-v4.7.html?v=20260915-1',{cache:'no-store'});
+    const response=await fetch('legacy-google-v4.7.html?v=20261017-crossday1',{cache:'no-store'});
     if(!response.ok)throw new Error('Could not load Daily Cash source.');
     let html=await response.text();
 
@@ -26,7 +26,7 @@
 
     html=html.replace('<title>BIG BROTHER — Daily Cash Collection V4.4 Responsive Close Workspace</title>','<title>BIG BROTHER — Daily Cash Collection Mobile</title>');
     html=html.replace('Invoice History · Cash Sales Only','All Locations · Cash Sales Only');
-    html=html.replace('Source: Invoice History. OPEN and PENDING Cash invoices are shown. Close batches can include only the same Sale Date, Location, and Salesman. Maximum 20 rows are shown per page.','All-location Daily Cash. Function permission controls access; staff location assignment is not used. OPEN and PENDING Cash invoices are shown. Close batches still require the same Sale Date, Location, and Salesman.');
+    html=html.replace('Source: Invoice History. OPEN and PENDING Cash invoices are shown. Close batches can include different Sale Dates within the same Location and Salesman. Maximum 20 rows are shown per page.','All-location Daily Cash. Function permission controls access; staff location assignment is not used. OPEN and PENDING Cash invoices are shown. Close batches can include different Sale Dates within the same Location and Salesman.');
 
     const bodyClose=html.toLowerCase().lastIndexOf('</body>');
     if(bodyClose<0)throw new Error('Daily Cash source is missing </body>.');
