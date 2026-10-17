@@ -80,8 +80,14 @@
     switch(action){
       case 'invoiceList':
         return rpc('bb_sales_support_your_collection_invoice_list');
-      case 'invoiceDetail':
+      case 'invoiceDetail': {
+        // Invoice numbers are not unique across customers. Use the permanent Invoice ID.
+        const invoiceId=String(params.invoiceId||'').trim();
+        if(invoiceId){
+          return rpc('bb_sales_support_your_collection_invoice_detail_by_id',{p_invoice_id:invoiceId});
+        }
         return rpc('bb_sales_support_your_collection_invoice_detail',{p_invoice_no:String(params.invoiceNo||'')});
+      }
       case 'invoiceHistoryRevision': {
         const revision=await rpc('bb_sales_support_your_collection_revision');
         return {success:true,revision:String(revision||'')};
