@@ -10,11 +10,11 @@
 <script>
 (async function(){
   try{
-    const response=await fetch('legacy-google-v4.7.html?v=20260914-1',{cache:'no-store'});
+    const response=await fetch('legacy-google-v4.7.html?v=20261017-crossday1',{cache:'no-store'});
     if(!response.ok)throw new Error('Could not load Your Collection source.');
     let html=await response.text();
 
-    const adapter='<scr'+'ipt src="supabase-your-collection-adapter.js?v=20260921-owner1"></scr'+'ipt>';
+    const adapter='<scr'+'ipt src="supabase-your-collection-adapter.js?v=20261017-byid1"></scr'+'ipt>';
     const headClose=html.toLowerCase().indexOf('</head>');
     if(headClose<0)throw new Error('Your Collection source is missing </head>.');
     html=html.slice(0,headClose)+adapter+'\n'+html.slice(headClose);
@@ -28,7 +28,7 @@
     html=html.replace('<h1>Daily Cash Collection</h1>','<h1>💵 Your Collection</h1>');
     html=html.replace('Cash invoices from Invoice History. Select invoices, count the real USD/KHR collected, and close the batch only when the cash matches.','Your Cash invoices only. Data follows the current Permanent Salesman assigned to each Location. Count the real USD/KHR collected and send the close to Admin when the cash matches.');
     html=html.replace('Invoice History · Cash Sales Only','Permanent Salesman · Location Responsibility');
-    html=html.replace('Source: Invoice History. OPEN and PENDING Cash invoices are shown. Close batches can include only the same Sale Date, Location, and Salesman. Maximum 20 rows are shown per page.','Source: Cash invoices from your current Permanent Salesman locations. OPEN and PENDING collections are shown. Close batches can include only the same Sale Date and Location. Maximum 20 rows are shown per page.');
+    html=html.replace('Source: Invoice History. OPEN and PENDING Cash invoices are shown. Close batches can include different Sale Dates within the same Location and Salesman. Maximum 20 rows are shown per page.','Source: Cash invoices from your current Permanent Salesman locations. OPEN and PENDING collections are shown. Close batches can include any Sale Dates within the same Location and Salesman. Maximum 20 rows are shown per page.');
 
     document.open();document.write(html);document.close();
   }catch(error){
