@@ -111,6 +111,8 @@
     return rpc('bb_sales_support_your_collection_access_profile');
   }
 
+  async function refundAvailable(){return rpc('bb_salesman_refund_available_v1');}
+
   async function locationMap(){
     const p=await accessProfile();
     const map={};
@@ -121,5 +123,5 @@
     return map;
   }
 
-  window.BBYourCollectionAdapter={rpc,api,apiPost,ensureSession,accessProfile,locationMap};
+  window.BBYourCollectionAdapter={rpc,api,apiPost,ensureSession,accessProfile,locationMap,refundAvailable};
 })();
