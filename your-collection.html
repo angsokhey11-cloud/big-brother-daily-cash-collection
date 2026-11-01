@@ -31,7 +31,7 @@
     html=html.replace('Source: Invoice History. OPEN and PENDING Cash invoices are shown. Close batches can include different Sale Dates within the same Location and Salesman. Maximum 20 rows are shown per page.','Source: Cash invoices from your current Permanent Salesman locations. OPEN and PENDING collections are shown. Close batches can include any Sale Dates within the same Location and Salesman. Maximum 20 rows are shown per page.');
 
     const refundAddon='<scr'+'ipt src="your-collection-salesman-refunds-v1.js?v=20261101-salesman1"></scr'+'ipt>';
-    html=html.replace('</body>',refundAddon+'\\n</body>');
+    html=html.replace('</body>',refundAddon+'\n</body>');
     document.open();document.write(html);document.close();
   }catch(error){
     console.error(error);
