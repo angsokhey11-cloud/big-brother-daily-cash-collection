@@ -101,6 +101,8 @@
 
   async function adminRefundOverview(){return rpc('bb_admin_salesman_refund_overview_v1');}
 
+  async function refundAvailable(){return rpc('bb_admin_salesman_refund_overview_v1');}
+
   async function locationMap(){
     const p=await accessProfile();
     const map={};
@@ -111,5 +113,5 @@
     return map;
   }
 
-  window.BBDailyCashAdapter={rpc,api,apiPost,ensureSession,accessProfile,locationMap,adminRefundOverview};
+  window.BBDailyCashAdapter={rpc,api,apiPost,ensureSession,accessProfile,locationMap,adminRefundOverview,refundAvailable};
 })();
