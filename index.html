@@ -14,7 +14,7 @@
     if(!response.ok)throw new Error('Could not load Daily Cash source.');
     let html=await response.text();
 
-    const adapter='<scr'+'ipt src="supabase-daily-cash-adapter.js?v=20260925-1"></scr'+'ipt>';
+    const adapter='<scr'+'ipt src="supabase-daily-cash-adapter.js?v=20261101-admin-refunds1"></scr'+'ipt>';
     const headClose=html.toLowerCase().indexOf('</head>');
     if(headClose<0)throw new Error('Daily Cash source is missing </head>.');
     html=html.slice(0,headClose)+adapter+'\n'+html.slice(headClose);
@@ -26,6 +26,7 @@
     html=html.replace('<title>BIG BROTHER — Daily Cash Collection V4.4 Responsive Close Workspace</title>','<title>BIG BROTHER — Daily Cash Collection Supabase</title>');
     html=html.replace('Invoice History · Cash Sales Only','Supabase · Cash Sales Only');
 
+    html=html.replace('</body>','<scr'+'ipt src="admin-salesman-refund-overview-v1.js?v=20261101-admin-refunds1"></scr'+'ipt></body>');
     document.open();document.write(html);document.close();
   }catch(error){
     console.error(error);
