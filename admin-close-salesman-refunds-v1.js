@@ -41,7 +41,7 @@ window.openCashRequest=function(...args){
   try{
    const data=await window.BBDailyCashAdapter.refundAvailable();
    const location=String((typeof selectedCloseInvoices==='function'?selectedCloseInvoices():[])[0]?.locationCode||'');
-   rows=(data.refunds||[]).filter(x=>x.locationCode===location);
+   rows=(data.rows||[]).filter(x=>x.status==='AVAILABLE' && x.locationCode===location);
    if(!el)return;el.replaceChildren();
    if(!rows.length)el.textContent='No available refunds for this location.';
    rows.forEach(x=>{
@@ -50,7 +50,7 @@ window.openCashRequest=function(...args){
     const checkbox=document.createElement('input');
     checkbox.type='checkbox';checkbox.value=x.refundId;checkbox.style.width='auto';
     checkbox.addEventListener('change',()=>{display();if(typeof recalculateClose==='function')recalculateClose()});
-    label.append(checkbox,document.createTextNode(x.refundId+' · '+x.invoiceNo+' · '+(x.customer||'')+' · -$'+Number(x.amountUSD).toFixed(2)));
+    label.append(checkbox,document.createTextNode(x.refundId+' · '+x.invoiceNo+' · '+(x.salesmanStaffId||'')+' · -$'+Number(x.amountUSD).toFixed(2)));
     el.appendChild(label);
    });
   }catch(e){if(el)el.textContent='Could not load refund deductions: '+(e?.message||e)}
