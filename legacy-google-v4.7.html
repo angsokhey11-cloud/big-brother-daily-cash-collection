@@ -605,6 +605,16 @@ function dateOnly(v){
   return s.slice(0,10);
 }
 
+// Daily Cash Summary only: readable DD-Mon-YYYY date without timezone shifts.
+function dailyCashSummaryDate(v){
+  const iso=dateOnly(v);
+  const match=iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!match)return iso||"-";
+  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const month=months[Number(match[2])-1];
+  return month?`${match[3]}-${month}-${match[1]}`:iso;
+}
+
 function usd(v){
   return "$"+num(v).toLocaleString(undefined,{
     minimumFractionDigits:2,
@@ -1520,9 +1530,11 @@ function selectedCashInvoicesForSummary(){
       locationName:g.locationName,
       saleDate:g.saleDate
     })))
+    // Daily Cash Summary: chronological (oldest invoice first), with
+    // invoice number as a consistent tie-breaker for same-date entries.
     .sort((a,b)=>
-      String(b.saleDate||"").localeCompare(String(a.saleDate||"")) ||
-      String(b.invoiceNo||"").localeCompare(String(a.invoiceNo||""))
+      dateOnly(a.invoiceDate||a.saleDate).localeCompare(dateOnly(b.invoiceDate||b.saleDate)) ||
+      String(a.invoiceNo||"").localeCompare(String(b.invoiceNo||""),undefined,{numeric:true})
     );
 }
 
@@ -1557,7 +1569,7 @@ function openDailyCashSummary(){
     const st=invoiceRequestStatus(inv);
 
     return `<tr>
-      <td>${esc(inv.saleDate||String(inv.invoiceDate||"").slice(0,10))}</td>
+      <td>${esc(dailyCashSummaryDate(inv.invoiceDate||inv.saleDate))}</td>
       <td><strong>${esc(inv.invoiceNo)}</strong></td>
       <td class="bb-khmer-name">${esc(inv.customer||"-")}</td>
       <td>${esc(inv.salesperson||"-")}</td>
