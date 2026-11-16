@@ -133,7 +133,11 @@ function viewTotals(){
  const btn=$('sendCashRequestBtn');
  if(btn)btn.textContent=selected.size?'✓ Send Daily Cash + A/R Requests':'✓ Send Close to Admin';
  const heading=$('cashRequestTitle');
- if(heading&&selected.size)heading.textContent='Close Cash Collection · Sales + Old A/R';
+ if(heading)heading.textContent=selected.size?'Close Cash Collection · Sales + Old A/R':
+  'Close Daily Cash ('+saleRows().length+' invoice'+(saleRows().length===1?'':'s')+')';
+ const expectedLabel=$('closeExpectedUSD')?.closest('.close-metric')?.querySelector('small');
+ if(expectedLabel)expectedLabel.textContent=selected.size?
+  'Combined Net Expected Cash (Sales + A/R)':'Net Expected Cash';
  const usdLabel=$('actualCashUSD')?.closest('.field')?.querySelector('label');
  const khrLabel=$('actualCashKHR')?.closest('.field')?.querySelector('label');
  if(usdLabel)usdLabel.textContent=selected.size?'Total Physical USD Cash (Sales + A/R)':'Actual USD Cash';
@@ -370,6 +374,11 @@ window.recalculateClose=function(...args){
  const card=$('closeResultCard');if(card){
   card.classList.toggle('good',matched);card.classList.toggle('bad',!matched);
  }
+ const salesOnly=Number(base.expected)||0;
+ if($('closePageTotal'))$('closePageTotal').textContent=
+   'Sales subtotal: '+fmt(salesOnly,'USD')+' · Old A/R: '+
+   fmt(ar.USD,'USD')+' / '+fmt(ar.KHR,'KHR')+
+   ' · Combined expected: '+(missingRate?'enter exchange rate':fmt(expected,'USD'));
  updateClosePanel();
  return {expected,actual,diff,matched,salesExpected:base.expected};
 };
