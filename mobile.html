@@ -32,6 +32,8 @@
     if(bodyClose<0)throw new Error('Daily Cash source is missing </body>.');
     html=html.slice(0,bodyClose)+'<scr'+'ipt src="mobile-daily-cash-ui.js?v=20260915-1"></scr'+'ipt>\n'+html.slice(bodyClose);
 
+    // Keep the existing mobile DCC adapter/UX, then add combined A/R summary.
+    html=html.replace('</body>','<scr'+'ipt src="daily-cash-collection-ar-cash-v1.js?v=20261116-main-dcc-ar1"></scr'+'ipt></body>');
     document.open();document.write(html);document.close();
   }catch(error){
     console.error(error);
