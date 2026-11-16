@@ -13,6 +13,7 @@ const fmt=(n,c)=>c==='KHR'?'៛'+Number(n||0).toLocaleString('en-US',{maximumFra
 const selected=new Map();
 let available=[],fetched=false,loading=false,sending=false,pendingToken='',pendingSignature='';
 const oldOpen=window.openCashRequest, oldSend=window.sendCashRequest,oldSummary=window.openDailyCashSummary,oldUpdate=window.updateSelectedSummary,oldClear=window.clearSelection;
+const oldRecalculateClose=window.recalculateClose;
 const css=document.createElement('style');css.id='bb-ar-combined-cash-style';
 css.textContent=[
 '#bbArMainPanel{background:#f3f8ff;border:1px solid #cbdcee;border-radius:12px;padding:12px 14px;margin:10px 0 14px;color:#1b4771}',
@@ -68,6 +69,32 @@ function saleTotals(useActual=false){
  }
  return out;
 }
+// Treat Actual USD/KHR as the WHOLE physical handover. Reserve old A/R currency
+// before submitting the remainder to the unchanged Sales Cash close RPC.
+function physicalCash(){
+ return {USD:amount($('actualCashUSD')?.value),KHR:amount($('actualCashKHR')?.value)};
+}
+function cashSplit(){
+ const total=physicalCash(),ar=arTotals();
+ const remainingUSD=Math.round((total.USD-ar.USD)*100)/100;
+ const remainingKHR=Math.round(total.KHR-ar.KHR);
+ return {total,ar,remainingUSD,remainingKHR,
+   shortUSD:remainingUSD<-.005,shortKHR:remainingKHR<-.000001};
+}
+function updateClosePanel(){
+ const panel=$('bbArClosePanel');if(!panel||!selected.size)return;
+ const split=cashSplit();
+ const saleExpected=typeof window.expectedCloseUSD==='function'
+   ?amount(window.expectedCloseUSD()):0;
+ panel.innerHTML='<strong>One physical cash handover · Sales + Old A/R</strong>'+
+  '<div class="bb-ar-small">Cash Sales expected (after refunds): '+fmt(saleExpected,'USD')+
+  '<br>Old A/R expected: '+fmt(split.ar.USD,'USD')+' / '+fmt(split.ar.KHR,'KHR')+
+  '<br>Physical cash counted in Actual fields: '+fmt(split.total.USD,'USD')+' / '+fmt(split.total.KHR,'KHR')+
+  '<br>Reserved for old A/R: '+fmt(split.ar.USD,'USD')+' / '+fmt(split.ar.KHR,'KHR')+
+  '<br><strong>Remaining for Daily Cash: '+fmt(Math.max(0,split.remainingUSD),'USD')+
+  ' / '+fmt(Math.max(0,split.remainingKHR),'KHR')+'</strong></div>'+
+  '<small>Enter the FULL handover once. Old A/R is deducted from the counted amount before saving the Sales Cash request. A/R cash must be received in the invoice currency; different-currency A/R uses the normal receivable workflow.</small>';
+}
 function validateList(){
  if(!rows().length)throw Error('Select at least one old A/R invoice.');
  for(const r of rows()){
@@ -94,17 +121,8 @@ function viewTotals(){
  }
  if($('bbArSelectionCount'))$('bbArSelectionCount').textContent=selected.size+' old A/R invoices selected';
  const b=$('bbArClosePanel');
- if(b){
-  b.hidden=selected.size===0;
-  const actual=saleTotals(true);
-  const combined={USD:actual.USD+a.USD,KHR:actual.KHR+a.KHR};
-  b.innerHTML='<strong>Combined Cash Handover</strong>'+
-   '<div class="bb-ar-small">Sales cash entered above: '+fmt(actual.USD,'USD')+' / '+fmt(actual.KHR,'KHR')+
-   '<br>Old A/R expected cash: '+fmt(a.USD,'USD')+' / '+fmt(a.KHR,'KHR')+
-   '<br><strong>Combined: '+fmt(combined.USD,'USD')+' / '+fmt(combined.KHR,'KHR')+'</strong></div>'+
-   '<small>This combined total assumes old A/R cash was received in invoice currency. Admin still verifies the payment method and physical amount in the existing A/R approval.</small>';
- }
- const closeLines=$('bbArCloseLines');
+ if(b){b.hidden=selected.size===0;if(selected.size)updateClosePanel();}
+  const closeLines=$('bbArCloseLines');
  if(closeLines){
   closeLines.hidden=!selected.size;
   closeLines.innerHTML='<strong>Old A/R cash included in this handover ('+selected.size+')</strong><div>'+
@@ -115,6 +133,12 @@ function viewTotals(){
  if(btn)btn.textContent=selected.size?'✓ Send Daily Cash + A/R Requests':'✓ Send Close to Admin';
  const heading=$('cashRequestTitle');
  if(heading&&selected.size)heading.textContent='Close Cash Collection · Sales + Old A/R';
+ const usdLabel=$('actualCashUSD')?.closest('.field')?.querySelector('label');
+ const khrLabel=$('actualCashKHR')?.closest('.field')?.querySelector('label');
+ if(usdLabel)usdLabel.textContent=selected.size?'Total Physical USD Cash (Sales + A/R)':'Actual USD Cash';
+ if(khrLabel)khrLabel.textContent=selected.size?'Total Physical KHR Cash (Sales + A/R)':'Actual KHR Cash';
+ if($('cashRequestOverlay')&&!$('cashRequestOverlay').classList.contains('hidden')&&
+    typeof window.recalculateClose==='function')window.recalculateClose();
 }
 function mount(){
  const bar=document.querySelector('.requestbar');
@@ -240,14 +264,26 @@ async function submit(withSales){
   if(withSales&&!ids.length)throw Error('Select Cash Sale invoices before sending the combined request.');
   if(ids.length&&$('closeMethod')?.value!=='Hand Cash to Accountant')
    throw Error('Mixed Daily Cash + A/R must use Hand Cash to Accountant. Bank deposits use the existing separate workflow.');
+  const allocation=cashSplit();
   if(ids.length){
    const calc=window.recalculateClose();
-   if(!calc?.matched)throw Error('Sales cash USD + KHR must match the selected Cash Sale invoices (after refund deductions).');
+   if(allocation.shortUSD||allocation.shortKHR)
+     throw Error('Counted cash must cover the old A/R amount in the SAME currency as its invoices. Enter ALL collected Sales + A/R cash in the Actual USD/KHR fields.');
+   if(!calc?.matched)
+     throw Error('Total physical cash must match Sales Cash (after refunds) + Old A/R. Check counted USD/KHR and closing rate.');
+   const rate=amount($('closingRate')?.value);
+   const remainderEquivalent=allocation.remainingUSD+
+     (allocation.remainingKHR>0&&rate>0?allocation.remainingKHR/rate:0);
+   const saleExpected=typeof window.expectedCloseUSD==='function'?
+     amount(window.expectedCloseUSD()):0;
+   if((allocation.remainingKHR>0&&rate<=0)||
+     Math.abs(remainderEquivalent-saleExpected)>.05)
+     throw Error('Cash Sales remainder does not match the original Daily Cash expected amount.');
   }
   if(!window.crypto?.randomUUID)throw Error('Secure request identifier unavailable; refresh the workspace.');
   const salePayload=ids.length?{
    invoiceIds:ids,closeMethod:'Hand Cash to Accountant',
-   actualCashUSD:amount($('actualCashUSD')?.value),actualCashKHR:amount($('actualCashKHR')?.value),
+   actualCashUSD:Math.max(0,allocation.remainingUSD),actualCashKHR:Math.max(0,allocation.remainingKHR),
    closingRate:amount($('closingRate')?.value),
    refundIds:[...document.querySelectorAll('#bbRefundChoices input:checked')].map(x=>x.value),
    note:String($('cashRequestNote')?.value||'').trim()
@@ -313,6 +349,29 @@ function injectArSummary(){
   '<td><span class="status-pill">To Pending Receivable</span></td><td>Admin A/R Review</td></tr>'
  ).join(''));
 }
+window.recalculateClose=function(...args){
+ const base=oldRecalculateClose.apply(this,args);
+ if(!selected.size)return base;
+ const counted=physicalCash(),ar=arTotals(),split=cashSplit();
+ const rate=amount($('closingRate')?.value);
+ const missingRate=(counted.KHR>0||ar.KHR>0)&&!(rate>0);
+ const expected=missingRate?NaN:base.expected+ar.USD+(ar.KHR>0?ar.KHR/rate:0);
+ const actual=missingRate?NaN:counted.USD+(counted.KHR>0?counted.KHR/rate:0);
+ const diff=actual-expected;
+ const matched=!missingRate&&!split.shortUSD&&!split.shortKHR&&
+   Number.isFinite(diff)&&Math.abs(diff)<=.05;
+ $('closeExpectedUSD').textContent=missingRate?'Exchange rate required':fmt(expected,'USD');
+ $('closeActualEquivalent').textContent=missingRate?'Exchange rate required':fmt(actual,'USD');
+ $('closeDifference').textContent=missingRate?'—':(diff>=0?'+':'-')+fmt(Math.abs(diff),'USD');
+ $('closeMatchStatus').textContent=missingRate?'ENTER EXCHANGE RATE':
+  split.shortUSD||split.shortKHR?'SHORT A/R CASH':matched?'MATCHED ✓':'NOT MATCHED';
+ $('closeMatchStatus').style.color=matched?'#198754':'#c93c46';
+ const card=$('closeResultCard');if(card){
+  card.classList.toggle('good',matched);card.classList.toggle('bad',!matched);
+ }
+ updateClosePanel();
+ return {expected,actual,diff,matched,salesExpected:base.expected};
+};
 window.openCashRequest=function(...args){const r=oldOpen.apply(this,args);viewTotals();return r;};
 window.sendCashRequest=function(){return selected.size?submit(true):oldSend();};
 window.openDailyCashSummary=function(){return selected.size?injectArSummary():oldSummary();};
