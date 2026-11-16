@@ -91,6 +91,14 @@ function viewTotals(){
   '<div class="bb-ar-pill"><small>Combined Collection</small><strong>'+fmt(t.USD,'USD')+' · '+fmt(t.KHR,'KHR')+'</strong></div>'
  ].join('');
  if($('bbArRequestOnly'))$('bbArRequestOnly').disabled=!selected.size||sending;
+ const summaryBtn=$('dailyCashSummaryBtn');
+ if(summaryBtn){
+  const cashCount=typeof window.selectedCashInvoicesForSummary==='function'?window.selectedCashInvoicesForSummary().length:0;
+  summaryBtn.disabled=!cashCount&&!selected.size;
+  summaryBtn.textContent=selected.size
+   ?'▦ Combined Cash Summary ('+cashCount+' Sales + '+selected.size+' A/R)'
+   :'▦ Daily Cash Summary ('+cashCount+')';
+ }
  if($('bbArSelectionCount'))$('bbArSelectionCount').textContent=selected.size+' old A/R invoices selected';
  const b=$('bbArClosePanel');
  if(b){
@@ -257,7 +265,7 @@ async function submit(withSales){
    window.buildGroups();
    await window.loadRequestState();
   }
-  selected.clear();pendingToken='';pendingSignature='';
+  selected.clear();pendingToken='';pendingSignature='';fetched=false;available=[];
   viewTotals();
   const arIds=(d.receivables||[]).map(r=>r.requestId).join(', ');
   alert('Cash handover request submitted.\n'+
