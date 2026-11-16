@@ -355,7 +355,10 @@ function injectArSummary(){
 }
 window.recalculateClose=function(...args){
  const base=oldRecalculateClose.apply(this,args);
- if(!selected.size)return base;
+ if(!selected.size){
+  if($('closePageTotal'))$('closePageTotal').textContent='Selected Total: '+fmt(base.expected,'USD');
+  return base;
+ }
  const counted=physicalCash(),ar=arTotals(),split=cashSplit();
  const rate=amount($('closingRate')?.value);
  const missingRate=(counted.KHR>0||ar.KHR>0)&&!(rate>0);
