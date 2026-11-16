@@ -1,0 +1,310 @@
+/* BIG BROTHER — Your Collection: combined Sales Cash + old A/R Cash preview (V1).
+   The only write is the protected atomic RPC; existing approval and clearing workflows remain unchanged. */
+(function(){
+'use strict';
+const adapter=window.BBYourCollectionAdapter;
+if(!adapter||typeof window.openCashRequest!=='function'||typeof window.sendCashRequest!=='function'){
+ console.warn('Combined collection requires the signed-in Your Collection workspace.');return;
+}
+const $=id=>document.getElementById(id);
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const amount=v=>{const n=Number(v);return Number.isFinite(n)?n:0;};
+const fmt=(n,c)=>c==='KHR'?'៛'+Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2}):'$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const selected=new Map();
+let available=[],fetched=false,loading=false,sending=false,pendingToken='',pendingSignature='';
+const oldOpen=window.openCashRequest, oldSend=window.sendCashRequest,oldSummary=window.openDailyCashSummary,oldUpdate=window.updateSelectedSummary,oldClear=window.clearSelection;
+const css=document.createElement('style');css.id='bb-ar-combined-cash-style';
+css.textContent=[
+'#bbArMainPanel{background:#f3f8ff;border:1px solid #cbdcee;border-radius:12px;padding:12px 14px;margin:10px 0 14px;color:#1b4771}',
+'#bbArMainPanel h3{font-size:14px;margin:0 0 5px;font-weight:900}',
+'.bb-ar-small{font-size:11px;line-height:1.5;color:#5b7188;margin:5px 0}',
+'.bb-ar-actions{display:flex;gap:8px;flex-wrap:wrap;margin:9px 0}',
+'.bb-ar-actions button{background:#184b89;color:white;border:1px solid #174680;border-radius:8px;min-height:37px;padding:8px 13px;font-weight:750;cursor:pointer}',
+'.bb-ar-actions button:disabled{opacity:.5;cursor:not-allowed}',
+'.bb-ar-pills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}',
+'.bb-ar-pill{background:white;border:1px solid #cbdcec;border-radius:9px;padding:8px}',
+'.bb-ar-pill small{display:block;font-size:10px;color:#59728b}.bb-ar-pill strong{font-size:13px;color:#123f79}',
+'#bbArClosePanel{background:#edf8f3;border:1px solid #b9dccb;border-radius:10px;padding:10px;margin:9px 0;font-size:12px;line-height:1.5}',
+'#bbArCloseLines{background:#fff;border:1px solid #d8e7eb;border-radius:9px;padding:10px;margin-top:12px;font-size:11px;line-height:1.7}',
+'#bbArPicker[hidden]{display:none!important}',
+'#bbArPicker{position:fixed;inset:0;z-index:100000;background:rgba(8,25,47,.63);display:flex;align-items:center;justify-content:center;padding:12px}',
+'.bb-ar-dialog{width:min(890px,100%);max-height:93dvh;background:#fff;border-radius:14px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 15px 50px #071c404b}',
+'.bb-ar-dialog-header{background:#17457e;color:white;padding:14px 17px;display:flex;align-items:center;gap:12px;justify-content:space-between}',
+'.bb-ar-dialog-header h2{font-size:17px;margin:0}.bb-ar-dialog-header button{color:#17457e;background:white;border:0;border-radius:7px;padding:9px 12px;cursor:pointer}',
+'.bb-ar-dialog-body{padding:13px;overflow:auto;flex:1;min-height:0}',
+'#bbArSearch{width:100%;box-sizing:border-box;padding:12px;border:1px solid #bbcede;border-radius:8px;font-size:14px}',
+'.bb-ar-row{display:grid;grid-template-columns:22px minmax(0,1fr) 105px;gap:9px;align-items:center;border-bottom:1px solid #e5edf5;padding:10px 2px}',
+'.bb-ar-row strong{color:#153d70;font-size:12px}.bb-ar-row small{color:#6a7e90;font-size:10px;display:block;line-height:1.4}',
+'.bb-ar-row input[type=number]{width:100%;box-sizing:border-box;padding:9px;border:1px solid #b9c9dc;border-radius:7px;text-align:right}',
+'.bb-ar-row input[type=number]:disabled{background:#eef2f5;color:#96a3ad}',
+'.bb-ar-dialog-footer{border-top:1px solid #d6e2ec;padding:11px 14px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap}',
+'.bb-ar-dialog-footer button{border:0;border-radius:8px;padding:10px 15px;color:#fff;background:#176a4a;font-weight:bold;cursor:pointer}',
+'#bbArPickerError{font-size:11px;color:#a22;min-height:14px;padding:0 12px 8px}',
+'@media(max-width:620px){.bb-ar-pills{grid-template-columns:1fr 1fr}.bb-ar-dialog{max-height:96dvh}.bb-ar-row{grid-template-columns:22px minmax(0,1fr) 88px}.bb-ar-row strong{font-size:11px}}'
+].join('');
+document.head.appendChild(css);
+
+function rows(){return [...selected.values()];}
+function arTotals(){
+ const out={USD:0,KHR:0};
+ rows().forEach(r=>{if(r.currency==='KHR')out.KHR+=r.amount;else out.USD+=r.amount;});
+ return out;
+}
+function saleRows(){
+ try{
+  if(!$('cashRequestOverlay')?.classList.contains('hidden')&&typeof window.selectedCloseInvoices==='function')
+   return window.selectedCloseInvoices();
+  if(typeof window.selectedGroupObjects==='function'&&typeof window.groupAvailableInvoices==='function')
+   return window.selectedGroupObjects().flatMap(window.groupAvailableInvoices);
+ }catch(_){}
+ return [];
+}
+function saleTotals(useActual=false){
+ const out={USD:0,KHR:0};
+ if(useActual){
+  out.USD=amount($('actualCashUSD')?.value);out.KHR=amount($('actualCashKHR')?.value);
+ }else{
+  saleRows().forEach(r=>{const cur=String(r.currency||'USD').toUpperCase();if(cur==='KHR')out.KHR+=amount(r.amountPaid);else out.USD+=amount(r.amountPaid);});
+ }
+ return out;
+}
+function saleLocation(){
+ const data=saleRows();return data.length?String(data[0].locationCode||''):'';
+}
+function dataLocation(){
+ return saleLocation()||(rows().length?String(rows()[0].locationCode||''):'');
+}
+function validateList(){
+ if(!rows().length)throw Error('Select at least one old A/R invoice.');
+ const loc=dataLocation();
+ for(const r of rows()){
+  if(r.locationCode!==loc)throw Error('Your selected Sales Cash and A/R Cash must belong to the same location.');
+  if(!(r.amount>0)||r.amount>amount(r.outstanding)+.000001)throw Error('Collected A/R amount must be greater than zero and cannot exceed outstanding: '+r.invoiceNo);
+ }
+}
+function viewTotals(){
+ const a=arTotals(),s=saleTotals(),t={USD:s.USD+a.USD,KHR:s.KHR+a.KHR};
+ const box=$('bbArMainTotals');
+ if(box)box.innerHTML=[
+  '<div class="bb-ar-pill"><small>Sales Cash (invoice currency)</small><strong>'+fmt(s.USD,'USD')+' · '+fmt(s.KHR,'KHR')+'</strong></div>',
+  '<div class="bb-ar-pill"><small>Old A/R Cash (invoice currency)</small><strong>'+fmt(a.USD,'USD')+' · '+fmt(a.KHR,'KHR')+'</strong></div>',
+  '<div class="bb-ar-pill"><small>Combined Collection</small><strong>'+fmt(t.USD,'USD')+' · '+fmt(t.KHR,'KHR')+'</strong></div>'
+ ].join('');
+ if($('bbArRequestOnly'))$('bbArRequestOnly').disabled=!selected.size||sending;
+ if($('bbArSelectionCount'))$('bbArSelectionCount').textContent=selected.size+' old A/R invoices selected';
+ const b=$('bbArClosePanel');
+ if(b){
+  b.hidden=selected.size===0;
+  const actual=saleTotals(true);
+  const combined={USD:actual.USD+a.USD,KHR:actual.KHR+a.KHR};
+  b.innerHTML='<strong>Combined Cash Handover</strong>'+
+   '<div class="bb-ar-small">Sales cash entered above: '+fmt(actual.USD,'USD')+' / '+fmt(actual.KHR,'KHR')+
+   '<br>Old A/R expected cash: '+fmt(a.USD,'USD')+' / '+fmt(a.KHR,'KHR')+
+   '<br><strong>Combined: '+fmt(combined.USD,'USD')+' / '+fmt(combined.KHR,'KHR')+'</strong></div>'+
+   '<small>This combined total assumes old A/R cash was received in invoice currency. Admin still verifies the payment method and physical amount in the existing A/R approval.</small>';
+ }
+ const closeLines=$('bbArCloseLines');
+ if(closeLines){
+  closeLines.hidden=!selected.size;
+  closeLines.innerHTML='<strong>Old A/R cash included in this handover ('+selected.size+')</strong><div>'+
+   rows().map(r=>esc(r.invoiceNo)+' · '+esc(r.customer)+' · '+fmt(r.amount,r.currency)+' ('+esc(r.locationCode)+')').join('<br>')+
+   '</div><div class="bb-ar-small">These will become separate Pending Receivable requests, not Daily Cash invoices.</div>';
+ }
+ const btn=$('sendCashRequestBtn');
+ if(btn)btn.textContent=selected.size?'✓ Send Daily Cash + A/R Requests':'✓ Send Close to Admin';
+ const heading=$('cashRequestTitle');
+ if(heading&&selected.size)heading.textContent='Close Cash Collection · Sales + Old A/R';
+}
+function mount(){
+ const bar=document.querySelector('.requestbar');
+ if(!bar||$('bbArMainPanel'))return;
+ const panel=document.createElement('section');panel.id='bbArMainPanel';
+ panel.innerHTML='<h3>Old A/R Cash in Salesman Collection</h3>'+
+  '<div class="bb-ar-small">Select cash already collected from outstanding invoices. The combined report is for salesman reconciliation only; after submission, Daily Cash and A/R go to their existing separate pending approval queues.</div>'+
+  '<div class="bb-ar-actions"><button type="button" id="bbArSelectBtn">＋ Select Old A/R Cash</button>'+
+  '<button type="button" id="bbArRequestOnly" disabled>Send A/R Requests Only</button></div>'+
+  '<div id="bbArMainTotals" class="bb-ar-pills"></div>'+
+  '<div class="bb-ar-small" id="bbArSelectionCount">0 old A/R invoices selected</div>'+
+  '<div class="bb-ar-small">Amounts show invoice currencies. For A/R received in another physical currency, use the standard A/R request workflow so Admin can verify the exchange.</div>';
+ bar.insertAdjacentElement('afterend',panel);
+ const line=document.createElement('div');line.id='bbArCloseLines';line.hidden=true;
+ $('closePagination')?.parentElement?.insertAdjacentElement('afterend',line);
+ const box=document.createElement('div');box.id='bbArClosePanel';box.hidden=true;
+ $('closeGroupRule')?.insertAdjacentElement('afterend',box);
+ const picker=document.createElement('div');picker.id='bbArPicker';picker.hidden=true;
+ picker.innerHTML='<section class="bb-ar-dialog" role="dialog" aria-modal="true" aria-label="Select Old Receivable Cash">'+
+  '<header class="bb-ar-dialog-header"><h2>Old A/R Cash · Select Collected Invoices</h2>'+
+  '<button type="button" id="bbArPickerClose">✕ Close</button></header>'+
+  '<div class="bb-ar-dialog-body"><p class="bb-ar-small">Only outstanding invoices within your A/R responsibility are listed. Enter the actual collected amount against each invoice; partial payment is allowed. No receivable will be cleared until Admin approves it.</p>'+
+  '<input id="bbArSearch" placeholder="Search customer, invoice number, or location…" autocomplete="off">'+
+  '<div id="bbArRows">Loading available receivables…</div>'+
+  '</div><footer class="bb-ar-dialog-footer"><span id="bbArPickerTotals">0 selected</span>'+
+  '<button type="button" id="bbArPickerDone">✓ Use Selected A/R Cash</button></footer>'+
+  '<div id="bbArPickerError" role="alert"></div></section>';
+ document.body.appendChild(picker);
+ $('bbArSelectBtn').addEventListener('click',openPicker);
+ $('bbArPickerClose').addEventListener('click',()=>{picker.hidden=true});
+ $('bbArPickerDone').addEventListener('click',()=>{
+  try{validateList();picker.hidden=true;viewTotals();}catch(error){if(!rows().length){picker.hidden=true;viewTotals()}else $('bbArPickerError').textContent=error.message}
+ });
+ $('bbArRequestOnly').addEventListener('click',()=>submit(false));
+ $('bbArSearch').addEventListener('input',renderPicker);
+ $('bbArRows').addEventListener('change',e=>{
+  const target=e.target,invoiceId=target?.dataset?.invoiceId;
+  if(!invoiceId)return;
+  const c=available.find(x=>String(x.invoiceId)===invoiceId);if(!c)return;
+  if(target.dataset.action==='select'){
+   if(target.checked){
+    const allowed=saleLocation()||(rows()[0]?.locationCode||c.locationCode);
+    if(String(c.locationCode||'')!==String(allowed||'')){
+     target.checked=false;$('bbArPickerError').textContent='Cash handover must use one location. Selected location: '+allowed;return;
+    }
+    selected.set(invoiceId,{...c,amount:amount(c.outstanding)});
+   }else selected.delete(invoiceId);
+   renderPicker();viewTotals();
+  }
+ });
+ $('bbArRows').addEventListener('input',e=>{
+  const t=e.target,id=t?.dataset?.invoiceId;
+  if(!id||t.dataset.action!=='amount'||!selected.has(id))return;
+  selected.get(id).amount=amount(t.value);
+  t.style.borderColor=amount(t.value)>0&&amount(t.value)<=amount(selected.get(id).outstanding)?'#b9c9dc':'#c22';
+  viewPickerTotal();viewTotals();
+ });
+ viewTotals();
+}
+async function load(){
+ if(fetched)return;
+ if(loading)return;
+ loading=true;
+ try{
+  const res=await adapter.rpc('bb_sales_support_ar_cash_candidates_v1');
+  if(!res?.success)throw Error(res?.message||'Cannot load receivables');
+  available=Array.isArray(res.invoices)?res.invoices:[];
+  fetched=true;
+ }finally{loading=false}
+}
+async function openPicker(){
+ mount();$('bbArPicker').hidden=false;$('bbArPickerError').textContent='';
+ $('bbArRows').textContent='Loading open receivables…';
+ try{await load();renderPicker();$('bbArSearch').focus();}
+ catch(e){$('bbArRows').textContent='Could not load A/R: '+(e?.message||e);}
+}
+function renderPicker(){
+ const host=$('bbArRows');if(!host)return;
+ const query=String($('bbArSearch')?.value||'').trim().toLowerCase();
+ const loc=saleLocation()||(rows()[0]?.locationCode||'');
+ const matches=available.filter(x=>(!loc||x.locationCode===loc)&&(
+  !query||[x.invoiceNo,x.customer,x.customerId,x.locationCode,x.locationName,x.invoiceDate]
+  .some(y=>String(y||'').toLowerCase().includes(query))
+ ));
+ const subset=matches.slice(0,70);
+ host.innerHTML=(!subset.length?'<div class="bb-ar-small">No eligible outstanding receivables at this location/search.</div>':
+ subset.map(x=>{
+  const id=String(x.invoiceId||''),sel=selected.get(id),on=!!sel;
+  return '<div class="bb-ar-row"><input type="checkbox" data-action="select" data-invoice-id="'+esc(id)+'"'+(on?' checked':'')+'>'+
+   '<div><strong>'+esc(x.invoiceNo)+' · '+esc(x.customer)+'</strong>'+
+   '<small>'+esc(x.invoiceDate)+' · '+esc(x.locationName||x.locationCode)+' · Outstanding '+fmt(x.outstanding,x.currency)+'</small></div>'+
+   '<label><small>Collected '+esc(x.currency)+'</small><input data-action="amount" data-invoice-id="'+esc(id)+'" type="number" min="0.01" max="'+esc(x.outstanding)+'" step="'+(x.currency==='KHR'?'1':'.01')+
+   '" value="'+(on?esc(sel.amount):esc(x.outstanding))+'"'+(on?'':' disabled')+'></label></div>';
+ }).join(''))+
+ (matches.length>70?'<div class="bb-ar-small">Showing first 70 of '+matches.length+' — narrow your search for more.</div>':'');
+ viewPickerTotal();
+}
+function viewPickerTotal(){
+ const t=arTotals();
+ if($('bbArPickerTotals'))$('bbArPickerTotals').textContent=selected.size+
+  ' invoices · '+fmt(t.USD,'USD')+' / '+fmt(t.KHR,'KHR');
+}
+async function submit(withSales){
+ if(sending)return;
+ try{
+  validateList();
+  const invoices=withSales&&typeof window.selectedCloseInvoices==='function'?window.selectedCloseInvoices():[];
+  const ids=[...new Set(invoices.map(x=>String(x.invoiceId||'').trim()).filter(Boolean))];
+  if(withSales&&!ids.length)throw Error('Select Cash Sale invoices before sending the combined request.');
+  if(ids.length&&$('closeMethod')?.value!=='Hand Cash to Accountant')
+   throw Error('Mixed Daily Cash + A/R must use Hand Cash to Accountant. Bank deposits use the existing separate workflow.');
+  if(ids.length){
+   const calc=window.recalculateClose();
+   if(!calc?.matched)throw Error('Sales cash USD + KHR must match the selected Cash Sale invoices (after refund deductions).');
+  }
+  if(!window.crypto?.randomUUID)throw Error('Secure request identifier unavailable; refresh the workspace.');
+  const salePayload=ids.length?{
+   invoiceIds:ids,closeMethod:'Hand Cash to Accountant',
+   actualCashUSD:amount($('actualCashUSD')?.value),actualCashKHR:amount($('actualCashKHR')?.value),
+   closingRate:amount($('closingRate')?.value),
+   refundIds:[...document.querySelectorAll('#bbRefundChoices input:checked')].map(x=>x.value),
+   note:String($('cashRequestNote')?.value||'').trim()
+  }:{invoiceIds:[]};
+  const arEntries=rows().map(r=>({invoiceId:r.invoiceId,amount:r.amount}));
+  const signature=JSON.stringify({sales:salePayload,arEntries});
+  if(signature!==pendingSignature){pendingSignature=signature;pendingToken=crypto.randomUUID();}
+  const activeButton=ids.length?$('sendCashRequestBtn'):$('bbArRequestOnly');
+  sending=true;if(activeButton){activeButton.disabled=true;activeButton.textContent='Submitting both request types…';}
+  const d=await adapter.rpc('bb_sales_support_combined_cash_request_v1',
+   {p_payload:{requestId:pendingToken,sales:salePayload,arEntries}});
+  if(!d?.success)throw Error(d?.message||'Combined request was not confirmed');
+  if(ids.length&&d.sales){
+   ids.forEach(id=>{
+    invoiceStates[id]={closeId:d.sales.closeId||'',requestId:d.sales.requestId||'',
+      status:'Pending',rawStatus:'Pending',canRequest:false};
+   });
+   lockedInvoices=invoiceStates;
+   if(typeof window.saveCloseStateCache==='function')window.saveCloseStateCache();
+   selectedGroups.clear();
+   window.closeCashRequest();
+   window.buildGroups();
+   await window.loadRequestState();
+  }
+  selected.clear();pendingToken='';pendingSignature='';
+  viewTotals();
+  const arIds=(d.receivables||[]).map(r=>r.requestId).join(', ');
+  alert('Cash handover request submitted.\n'+
+   (d.sales?'Daily Cash → Pending Daily Cash: '+d.sales.closeId+'\n':'')+
+   (arIds?'Receivable → Pending Receivable: '+arIds+'\n':'')+
+   '\nThe existing Admin approval and cash clearing flows are unchanged.');
+ }catch(e){
+  const msg=e?.message||String(e);
+  if($('cashRequestOverlay')&&!$('cashRequestOverlay').classList.contains('hidden')){
+   $('cashRequestError').textContent=msg;$('cashRequestError').classList.add('show');
+  }else alert('Could not submit collection: '+msg);
+ }finally{
+  sending=false;
+  if($('sendCashRequestBtn')){$('sendCashRequestBtn').disabled=false;}
+  viewTotals();
+ }
+}
+function injectArSummary(){
+ if(!selected.size)return;
+ const base=typeof window.selectedCashInvoicesForSummary==='function'?window.selectedCashInvoicesForSummary():[];
+ if(base.length){oldSummary();}
+ else{
+  $('dailyCashSummaryOverlay').classList.remove('hidden');
+  $('dailyCashInvoiceDetailPanel').classList.add('hidden');
+  $('dailyCashSummaryBody').innerHTML='';
+ }
+ const a=arTotals(),s=saleTotals(),t={USD:s.USD+a.USD,KHR:s.KHR+a.KHR};
+ $('dailyCashSummarySubtitle').textContent='Combined salesman cash collection preview · separate Daily Cash and A/R requests';
+ $('dailyCashSummaryMeta').innerHTML='<div class="meta-box"><small>Sales Cash</small><strong>'+fmt(s.USD,'USD')+' · '+fmt(s.KHR,'KHR')+'</strong></div>'+
+  '<div class="meta-box"><small>Old A/R Cash</small><strong>'+fmt(a.USD,'USD')+' · '+fmt(a.KHR,'KHR')+'</strong></div>'+
+  '<div class="meta-box"><small>Combined Cash</small><strong>'+fmt(t.USD,'USD')+' · '+fmt(t.KHR,'KHR')+'</strong></div>'+
+  '<div class="meta-box"><small>Review</small><strong>2 separate request queues</strong></div>';
+ $('dailyCashSummaryBody').insertAdjacentHTML('beforeend',rows().map(r=>
+  '<tr><td>'+esc(r.invoiceDate)+'</td><td><strong>'+esc(r.invoiceNo)+' (Old A/R)</strong></td>'+
+  '<td>'+esc(r.customer)+'</td><td>'+esc(r.salesperson||'-')+'</td>'+
+  '<td>'+esc(r.locationName||r.locationCode)+'</td><td>'+esc(r.currency)+'</td>'+
+  '<td class="money">'+fmt(r.amount,r.currency)+'</td>'+
+  '<td><span class="status-pill">To Pending Receivable</span></td><td>Admin A/R Review</td></tr>'
+ ).join(''));
+}
+window.openCashRequest=function(...args){const r=oldOpen.apply(this,args);viewTotals();return r;};
+window.sendCashRequest=function(){return selected.size?submit(true):oldSend();};
+window.openDailyCashSummary=function(){return selected.size?injectArSummary():oldSummary();};
+window.updateSelectedSummary=function(...args){const r=oldUpdate.apply(this,args);viewTotals();
+ if($('dailyCashSummaryBtn')&&selected.size){$('dailyCashSummaryBtn').disabled=false;$('dailyCashSummaryBtn').textContent='▦ Combined Cash Summary ('+selected.size+' A/R + Sales)';}
+ return r;};
+window.clearSelection=function(...args){selected.clear();pendingToken='';pendingSignature='';
+ const r=oldClear.apply(this,args);viewTotals();return r;};
+mount();
+})();
