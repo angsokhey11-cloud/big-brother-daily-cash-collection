@@ -28,6 +28,8 @@
 
     html=html.replace('</body>','<scr'+'ipt src="admin-salesman-refund-overview-v1.js?v=20261101-admin-deduct3"></scr'+'ipt></body>');
     html=html.replace('</body>','<scr'+'ipt src="admin-close-salesman-refunds-v1.js?v=20261101-admin-deduct3"></scr'+'ipt></body>');
+    // Shared sales + old A/R cash selection; load after existing refunds/close integrations.
+    html=html.replace('</body>','<scr'+'ipt src="daily-cash-collection-ar-cash-v1.js?v=20261116-main-dcc-ar1"></scr'+'ipt></body>');
     document.open();document.write(html);document.close();
   }catch(error){
     console.error(error);
