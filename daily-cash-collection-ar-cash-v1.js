@@ -69,17 +69,10 @@ function saleTotals(useActual=false){
  }
  return out;
 }
-function saleLocation(){
- const data=saleRows();return data.length?String(data[0].locationCode||''):'';
-}
-function dataLocation(){
- return saleLocation()||(rows().length?String(rows()[0].locationCode||''):'');
-}
 function validateList(){
  if(!rows().length)throw Error('Select at least one old A/R invoice.');
- const loc=dataLocation();
  for(const r of rows()){
-  if(r.locationCode!==loc)throw Error('Your selected Sales Cash and A/R Cash must belong to the same location.');
+  if(!String(r.locationCode||'').trim())throw Error('Customer assigned location is missing for invoice '+r.invoiceNo+'. Update the customer directory.');
   if(!(r.amount>0)||r.amount>amount(r.outstanding)+.000001)throw Error('Collected A/R amount must be greater than zero and cannot exceed outstanding: '+r.invoiceNo);
  }
 }
@@ -129,7 +122,7 @@ function mount(){
  if(!bar||$('bbArMainPanel'))return;
  const panel=document.createElement('section');panel.id='bbArMainPanel';
  panel.innerHTML='<h3>Old A/R Cash in Daily Cash Collection</h3>'+
-  '<div class="bb-ar-small">Select cash already collected from outstanding invoices. The combined report is for salesman reconciliation only; after submission, Daily Cash and A/R go to their existing separate pending approval queues.</div>'+
+  '<div class="bb-ar-small">Select cash collected from customers using their assigned customer locations, even if the invoice was sold or shipped from another route. Daily Cash and A/R keep their separate Admin approvals.</div>'+
   '<div class="bb-ar-actions"><button type="button" id="bbArSelectBtn">＋ Select Old A/R Cash</button>'+
   '<button type="button" id="bbArRequestOnly" disabled>Send A/R Requests Only</button></div>'+
   '<div id="bbArMainTotals" class="bb-ar-pills"></div>'+
@@ -144,8 +137,10 @@ function mount(){
  picker.innerHTML='<section class="bb-ar-dialog" role="dialog" aria-modal="true" aria-label="Select Old Receivable Cash">'+
   '<header class="bb-ar-dialog-header"><h2>Old A/R Cash · Select Collected Invoices</h2>'+
   '<button type="button" id="bbArPickerClose">✕ Close</button></header>'+
-  '<div class="bb-ar-dialog-body"><p class="bb-ar-small">Only outstanding invoices within your A/R responsibility are listed. Enter the actual collected amount against each invoice; partial payment is allowed. No receivable will be cleared until Admin approves it.</p>'+
-  '<input id="bbArSearch" placeholder="Search customer, invoice number, or location…" autocomplete="off">'+
+  '<div class="bb-ar-dialog-body"><p class="bb-ar-small">Only outstanding invoices in your authorized customer locations are listed. Sale or batch location does not determine A/R collection responsibility. Partial payments remain subject to Admin approval.</p>'+
+  '<label class="bb-ar-small" for="bbArLocationFilter">Customer assigned location (not sale/batch location)</label>'+
+  '<select id="bbArLocationFilter" style="width:100%;padding:10px;border:1px solid #bbcede;border-radius:8px;margin-bottom:8px"><option value="">All authorized customer locations</option></select>'+
+  '<input id="bbArSearch" placeholder="Search customer, invoice number, or customer location…" autocomplete="off">'+
   '<div id="bbArRows">Loading available receivables…</div>'+
   '</div><footer class="bb-ar-dialog-footer"><span id="bbArPickerTotals">0 selected</span>'+
   '<button type="button" id="bbArPickerDone">✓ Use Selected A/R Cash</button></footer>'+
@@ -158,15 +153,15 @@ function mount(){
  });
  $('bbArRequestOnly').addEventListener('click',()=>submit(false));
  $('bbArSearch').addEventListener('input',renderPicker);
+ $('bbArLocationFilter').addEventListener('change',renderPicker);
  $('bbArRows').addEventListener('change',e=>{
   const target=e.target,invoiceId=target?.dataset?.invoiceId;
   if(!invoiceId)return;
   const c=available.find(x=>String(x.invoiceId)===invoiceId);if(!c)return;
   if(target.dataset.action==='select'){
    if(target.checked){
-    const allowed=saleLocation()||(rows()[0]?.locationCode||c.locationCode);
-    if(String(c.locationCode||'')!==String(allowed||'')){
-     target.checked=false;$('bbArPickerError').textContent='Cash handover must use one location. Selected location: '+allowed;return;
+    if(!String(c.locationCode||'').trim()){
+     target.checked=false;$('bbArPickerError').textContent='Customer assigned location missing. Update the Customer directory first.';return;
     }
     selected.set(invoiceId,{...c,amount:amount(c.outstanding)});
    }else selected.delete(invoiceId);
@@ -190,6 +185,16 @@ async function load(){
   const res=await adapter.rpc('bb_sales_support_ar_cash_candidates_v1');
   if(!res?.success)throw Error(res?.message||'Cannot load receivables');
   available=Array.isArray(res.invoices)?res.invoices:[];
+  const select=$('bbArLocationFilter');
+  if(select){
+   const old=select.value;
+   const routes=new Map();
+   for(const inv of available)if(inv.locationCode)routes.set(inv.locationCode,String(inv.locationName||inv.locationCode));
+   select.innerHTML='<option value="">All authorized customer locations</option>'+
+    [...routes.entries()].sort((a,b)=>a[1].localeCompare(b[1])).map(([code,name])=>
+     '<option value="'+esc(code)+'">'+esc(name)+' · '+esc(code)+'</option>').join('');
+   if(routes.has(old))select.value=old;
+  }
   fetched=true;
  }finally{loading=false}
 }
@@ -202,8 +207,8 @@ async function openPicker(){
 function renderPicker(){
  const host=$('bbArRows');if(!host)return;
  const query=String($('bbArSearch')?.value||'').trim().toLowerCase();
- const loc=saleLocation()||(rows()[0]?.locationCode||'');
- const matches=available.filter(x=>(!loc||x.locationCode===loc)&&(
+ const locationFilter=String($('bbArLocationFilter')?.value||'');
+ const matches=available.filter(x=>(!locationFilter||x.locationCode===locationFilter)&&(
   !query||[x.invoiceNo,x.customer,x.customerId,x.locationCode,x.locationName,x.invoiceDate]
   .some(y=>String(y||'').toLowerCase().includes(query))
  ));
@@ -213,7 +218,9 @@ function renderPicker(){
   const id=String(x.invoiceId||''),sel=selected.get(id),on=!!sel;
   return '<div class="bb-ar-row"><input type="checkbox" data-action="select" data-invoice-id="'+esc(id)+'"'+(on?' checked':'')+'>'+
    '<div><strong>'+esc(x.invoiceNo)+' · '+esc(x.customer)+'</strong>'+
-   '<small>'+esc(x.invoiceDate)+' · '+esc(x.locationName||x.locationCode)+' · Outstanding '+fmt(x.outstanding,x.currency)+'</small></div>'+
+   '<small>'+esc(x.invoiceDate)+' · Customer location: '+esc(x.locationName||x.locationCode)+' ('+esc(x.locationCode)+')'+
+   (x.saleLocationCode&&x.saleLocationCode!==x.locationCode?' · Sale source: '+esc(x.saleLocationCode):'')+
+   ' · Outstanding '+fmt(x.outstanding,x.currency)+'</small></div>'+
    '<label><small>Collected '+esc(x.currency)+'</small><input data-action="amount" data-invoice-id="'+esc(id)+'" type="number" min="0.01" max="'+esc(x.outstanding)+'" step="'+(x.currency==='KHR'?'1':'.01')+
    '" value="'+(on?esc(sel.amount):esc(x.outstanding))+'"'+(on?'':' disabled')+'></label></div>';
  }).join(''))+
