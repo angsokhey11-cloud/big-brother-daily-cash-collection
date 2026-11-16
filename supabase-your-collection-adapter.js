@@ -56,7 +56,22 @@
     return session;
   }
 
+
+  // Local Brain V5/V6 must rewrite the Cloud REST destination to LOCAL Supabase.
+  // Reject local requests if that rewrite was missed; never write financial data to Live.
+  function assertLocalEndpoint(){
+    const host=String(location.hostname||'').toLowerCase();
+    const port=String(location.port||'');
+    const local=host==='localhost'||host==='127.0.0.1'||host.endsWith('.local')
+      || ['8081','8083','8443'].includes(port)
+      || new URLSearchParams(location.search).get('localbrain')==='1';
+    if(local&&String(URL).toLowerCase().includes('sjfhlaclgmkwwofzstok.supabase.co')){
+      throw new Error('LOCAL BRAIN SAFETY: Cloud API rewrite missing. No financial data was changed. Check V5/V6 local routing.');
+    }
+  }
+
   async function rpc(fn,args={}){
+    assertLocalEndpoint();
     await ensureSession();
     const call=()=>fetch(URL+'/rest/v1/rpc/'+fn,{
       method:'POST',
