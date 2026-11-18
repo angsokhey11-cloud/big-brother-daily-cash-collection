@@ -250,6 +250,79 @@ tbody tr:hover{background:#f9fbfe}
 @media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr 1fr}.preview-meta{grid-template-columns:1fr 1fr}.topbar{align-items:flex-start;flex-direction:column}}
 @media(max-width:560px){body{padding:10px}.cards{grid-template-columns:1fr 1fr;gap:8px}.card{padding:11px}.card strong{font-size:18px}.filters{grid-template-columns:1fr}.preview-meta{grid-template-columns:1fr}.modal-actions{align-items:flex-start;flex-direction:column}}
 
+/* ===== V4.7 CASH CLOSE WORKSPACE SCROLL FIX — YOUR + DAILY CASH =====
+   Let the *whole* closing workspace scroll vertically, not only the invoice
+   grid or the closing sidebar. The table keeps its own horizontal overflow.
+   Read-only layout override: no calculation or request-handler changes. */
+#cashRequestOverlay{
+  padding:8px;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+#cashRequestOverlay > .close-workspace{
+  width:min(1800px,calc(100vw - 16px));
+  max-width:calc(100vw - 16px);
+  height:calc(100vh - 16px);
+  height:calc(100dvh - 16px);
+  max-height:calc(100dvh - 16px);
+  grid-template-columns:minmax(0,2.2fr) minmax(360px,.9fr);
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+#cashRequestOverlay .close-left{
+  align-self:start;
+  min-height:0;
+  min-width:0;
+  overflow:visible;
+}
+#cashRequestOverlay .close-right{
+  align-self:start;
+  min-height:0;
+  min-width:0;
+  overflow:visible;
+  padding:18px;
+}
+#cashRequestOverlay .close-list-wrap{
+  flex:none;
+  min-height:0;
+  min-width:0;
+  max-width:100%;
+  overflow-x:auto;
+  overflow-y:auto;
+  overscroll-behavior-x:contain;
+}
+#cashRequestOverlay .close-list-wrap table{
+  width:100%;
+  min-width:1120px;
+}
+#cashRequestOverlay .close-pagination{
+  flex-shrink:0;
+}
+@media(max-width:1100px){
+  #cashRequestOverlay > .close-workspace{
+    grid-template-columns:minmax(0,1fr);
+  }
+  #cashRequestOverlay .close-left{
+    border-right:0;
+    border-bottom:1px solid var(--line);
+  }
+  #cashRequestOverlay .close-right{padding:16px}
+}
+@media(max-width:720px){
+  #cashRequestOverlay{padding:4px}
+  #cashRequestOverlay > .close-workspace{
+    width:calc(100vw - 8px);
+    max-width:calc(100vw - 8px);
+    height:calc(100dvh - 8px);
+    max-height:calc(100dvh - 8px);
+  }
+  #cashRequestOverlay .close-list-wrap table{min-width:880px}
+  #cashRequestOverlay .close-right{padding:12px}
+}
+
 /* ===== V4.7 MODAL STACKING FIX ===== */
 #cashRequestOverlay{
   z-index:1000;
